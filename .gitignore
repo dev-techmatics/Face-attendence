@@ -1,0 +1,13 @@
+bin/
+obj/
+*.user
+.vs/
+.idea/
+artifacts/
+# Face images and biometric data must never be committed
+storage/
+models/*.onnx
+appsettings.Local.json
+*.db
+*.db-shm
+*.db-wal

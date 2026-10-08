@@ -127,8 +127,11 @@ app.MapHealthChecks("/health").AllowAnonymous();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference();
+    // Anonymous, or the fallback policy returns 401 to a browser that has no way to send an
+    // X-Api-Key header - which makes the interactive docs unopenable. Safe here because these
+    // endpoints are only mapped in Development.
+    app.MapOpenApi().AllowAnonymous();
+    app.MapScalarApiReference().AllowAnonymous();
 }
 
 await MigrateAsync(app);

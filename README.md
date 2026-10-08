@@ -42,6 +42,23 @@ dotnet run --project src/Api
 
 Confirm which engine is live with `GET /api/v1/diagnostics/provider`.
 
+## Opening the project
+
+You do not need an IDE at all - `dotnet build`, `dotnet test` and `dotnet run` are the whole
+story. If you want an editor:
+
+- **VS Code** - open the *folder*, not the solution file: `code .` from here. Install the C#
+  Dev Kit for IntelliSense and debugging: `code --install-extension ms-dotnettools.csdevkit`.
+- **Visual Studio / Rider** - open `FaceAttendance.sln`.
+
+Note that double-clicking a `.sln` on a machine with no Visual Studio installed makes Windows
+ask which application to use, because the extension is registered to a Visual Studio launcher
+that is not there. That is a file-association quirk, not a problem with the solution.
+
+The solution is deliberately in the classic `.sln` format rather than the newer `.slnx` that the
+.NET 10 SDK defaults to, because `.slnx` is only readable by very recent Visual Studio and Rider
+builds.
+
 ## Registering a person
 
 The endpoint most capture screens want is a single multipart call that creates the person and

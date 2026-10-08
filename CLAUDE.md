@@ -13,7 +13,7 @@ an attendance row is written.
 ## Commands
 
 ```bash
-dotnet build FaceAttendance.slnx     # whole solution
+dotnet build FaceAttendance.sln      # whole solution
 dotnet test                          # 68 tests, xunit v2
 dotnet run --project src/Api         # http://localhost:5080, Scalar UI at /scalar/v1
 pwsh scripts/setup-database.ps1      # apply migrations to .\SQLEXPRESS

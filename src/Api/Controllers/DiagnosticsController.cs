@@ -45,7 +45,10 @@ public sealed class DiagnosticsController(
         _options.MinImageDimension,
         _options.MinFaceDimension,
         _options.EnforcePoseCheck,
-        _options.StoreProbeImages);
+        _options.StoreProbeImages,
+        // Exposed so an operator can tell a collapsed punch from a rejected one without
+        // reading the config file off the server.
+        _options.DuplicatePunchWindowMinutes);
 
     /// <summary>
     /// Run detection and quality scoring on a frame without storing anything. Use it to check

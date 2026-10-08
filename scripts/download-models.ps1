@@ -21,10 +21,15 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$OutputDirectory = (Join-Path $PSScriptRoot '..\src\Api\models')
+    # Resolved after the param block: $PSScriptRoot is empty inside a param default on
+    # Windows PowerShell 5.1.
+    [string]$OutputDirectory
 )
 
 $ErrorActionPreference = 'Stop'
+
+$scriptDirectory = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $OutputDirectory) { $OutputDirectory = Join-Path $scriptDirectory '..\src\Api\models' }
 
 $models = @(
     @{

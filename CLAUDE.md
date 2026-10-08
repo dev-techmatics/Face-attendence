@@ -16,8 +16,9 @@ an attendance row is written.
 dotnet build FaceAttendance.sln      # whole solution
 dotnet test                          # 68 tests, xunit v2
 dotnet run --project src/Api         # http://localhost:5080, Scalar UI at /scalar/v1
-pwsh scripts/setup-database.ps1      # apply migrations to .\SQLEXPRESS
-pwsh scripts/download-models.ps1     # fetch the two ONNX models (~255MB)
+powershell -ExecutionPolicy Bypass -File scripts\setup-database.ps1   # migrations -> .\SQLEXPRESS
+powershell -ExecutionPolicy Bypass -File scripts\download-models.ps1  # the two ONNX models (~255MB)
+powershell -ExecutionPolicy Bypass -File scripts\smoke-test.ps1        # 28 checks against a running API
 ```
 
 Local database is SQL Server Express, instance `.\SQLEXPRESS`, database `FaceAttendance`,

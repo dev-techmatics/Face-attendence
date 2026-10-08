@@ -19,7 +19,7 @@ exercised end to end over HTTP.
 
 ```bash
 # 1. Database (SQL Server Express on the default .\SQLEXPRESS instance)
-pwsh scripts/setup-database.ps1
+powershell -ExecutionPolicy Bypass -File scripts\setup-database.ps1
 
 # 2. Run with the stub provider - no model files needed
 dotnet run --project src/Api
@@ -35,12 +35,54 @@ as one person and verify against each other; `bob-front.jpg` will not match them
 To switch on real recognition:
 
 ```bash
-pwsh scripts/download-models.ps1      # SCRFD + ArcFace, about 255MB
+powershell -ExecutionPolicy Bypass -File scripts\download-models.ps1   # SCRFD + ArcFace, ~255MB
 # set FaceRecognition:Provider to "onnx" in src/Api/appsettings.Development.json
 dotnet run --project src/Api
 ```
 
 Confirm which engine is live with `GET /api/v1/diagnostics/provider`.
+
+## Checking it works
+
+Three ways, cheapest first.
+
+**1. The smoke test — one command, 28 checks.** Start the API, then:
+
+```
+powershell -ExecutionPolicy Bypass -File scripts\smoke-test.ps1
+```
+
+It registers two people from three poses each, verifies a punch, then deliberately tries the
+things that should fail: an imposter, an unknown face, a double tap, a face already registered
+under another id, a device key trying to enrol, and a text file renamed to `.jpg`. Every check
+prints PASS or FAIL with the reason. It is idempotent — run it as often as you like.
+
+It needs no PowerShell 7; it talks to `System.Net.Http` directly so it works on the Windows
+PowerShell 5.1 that ships with Windows.
+
+**2. The interactive reference.** With the API running in Development, open:
+
+```
+http://localhost:5080/scalar/v1
+```
+
+Every endpoint is listed with its schema and a Try It button. Paste `dev-admin-key` into the
+`X-Api-Key` header to call anything.
+
+**3. Hand-written requests.** [docs/api-examples.http](docs/api-examples.http) holds a runnable
+request per endpoint for the VS Code REST Client or the JetBrains HTTP client, including a
+section of calls that are *supposed* to fail. It uses the images in
+[docs/samples](docs/samples/), so it works without edits.
+
+For a single quick check that the service is alive and which engine is behind it:
+
+```
+curl http://localhost:5080/health
+curl -H "X-Api-Key: dev-admin-key" http://localhost:5080/api/v1/diagnostics/provider
+```
+
+If `providerId` starts with `development:` then **no real face recognition is running** — it is
+matching on upload file names. That is the default so the front end can be built first.
 
 ## Opening the project
 
@@ -139,6 +181,8 @@ the day, and a new day always starts with an `In`. Any repeat punch within
 `DuplicatePunchWindowMinutes` (default 2) is collapsed into the first.
 
 ## Endpoints
+
+Every route, with the key it needs. `/scalar/v1` renders the same list interactively.
 
 | Method | Route | Key | Purpose |
 |---|---|---|---|
@@ -252,6 +296,8 @@ src/Infra           EF Core, image stores, the three providers
 
 src/Api             Controllers, DTOs, auth, problem details
 tests/Tests         68 tests (SQLite in-memory for the repository ones)
+scripts/            setup-database, download-models, smoke-test
+docs/samples/       synthetic placeholder images - dev provider only, not real faces
 ```
 
 ## Database

@@ -192,4 +192,5 @@ public sealed record ProviderInfoResponse(
     int MinImageDimension,
     int MinFaceDimension,
     bool PoseCheckEnabled,
-    bool StoreProbeImages);
+    bool StoreProbeImages,
+    int DuplicatePunchWindowMinutes);

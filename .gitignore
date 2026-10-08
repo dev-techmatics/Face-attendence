@@ -11,3 +11,7 @@ appsettings.Local.json
 *.db
 *.db-shm
 *.db-wal
+
+# Real face photographs must never be committed. The synthetic placeholders in
+# docs/samples are tracked deliberately; anything added under a personal/ subfolder is not.
+docs/samples/personal/

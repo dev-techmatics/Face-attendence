@@ -34,9 +34,9 @@ public class Person
     /// <summary>Optimistic concurrency guard (rowversion on SQL Server).</summary>
     public byte[]? RowVersion { get; set; }
 
-    public ICollection<FaceTemplate> FaceTemplates { get; set; } = new List<FaceTemplate>();
+    public ICollection<FaceTemplate> FaceTemplates { get; set; } = [];
 
-    public ICollection<AttendanceEvent> AttendanceEvents { get; set; } = new List<AttendanceEvent>();
+    public ICollection<AttendanceEvent> AttendanceEvents { get; set; } = [];
 
     public bool CanMarkAttendance =>
         Status == PersonStatus.Active && EnrollmentStatus == EnrollmentStatus.Enrolled;

@@ -17,15 +17,9 @@ internal static class ImageOps
 
     public static SKBitmap Decode(byte[] content)
     {
-        SKBitmap? bitmap = SKBitmap.Decode(content);
-
-        if (bitmap is null)
-        {
-            throw new FaceProcessingException(
+        SKBitmap? bitmap = SKBitmap.Decode(content) ?? throw new FaceProcessingException(
                 FaceError.CorruptImage,
                 "The image could not be decoded. It may be truncated or not an image at all.");
-        }
-
         return bitmap;
     }
 

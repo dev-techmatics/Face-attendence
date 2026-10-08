@@ -101,6 +101,27 @@ The solution is deliberately in the classic `.sln` format rather than the newer 
 .NET 10 SDK defaults to, because `.slnx` is only readable by very recent Visual Studio and Rider
 builds.
 
+### If a build fails with "the file is locked by: FaceAttendance.Api"
+
+```
+error MSB3027: Could not copy "FaceAttendance.Core.dll" ... The file is locked by:
+"FaceAttendance.Api (24524)"
+```
+
+This is not a code error. The API is still running and holding its own DLLs open, so MSBuild
+cannot overwrite them. One failure produces four errors and twenty warnings - MSBuild retries
+each file ten times before giving up - which makes it look far worse than it is.
+
+Stop the app and rebuild. In VS Code, Shift+F5 ends a debug session cleanly; for a stray
+process there is a **stop running API** task, or:
+
+```
+powershell -NoProfile -Command "Get-Process FaceAttendance.Api -ErrorAction SilentlyContinue | Stop-Process -Force"
+```
+
+Starting the app with F5 rather than a detached `dotnet run` avoids this: stopping the debugger
+terminates the process.
+
 ## Registering a person
 
 The endpoint most capture screens want is a single multipart call that creates the person and

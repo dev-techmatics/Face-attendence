@@ -273,26 +273,26 @@ public sealed class RekognitionFaceRecognitionProvider : IFaceRecognitionProvide
         int faceCount,
         int imageWidth,
         int imageHeight) => new()
-    {
-        FaceDetected = true,
-        FaceCount = faceCount,
-        DetectionScore = (detail.Confidence ?? 0f) / 100d,
-        QualityScore = (detail.Quality?.Sharpness ?? 50f) / 100d,
-        // Ratios scaled to pixels so MinFaceDimension means the same thing here as elsewhere.
-        Box = detail.BoundingBox is { } b
+        {
+            FaceDetected = true,
+            FaceCount = faceCount,
+            DetectionScore = (detail.Confidence ?? 0f) / 100d,
+            QualityScore = (detail.Quality?.Sharpness ?? 50f) / 100d,
+            // Ratios scaled to pixels so MinFaceDimension means the same thing here as elsewhere.
+            Box = detail.BoundingBox is { } b
             ? new FaceBox(
                 (b.Left ?? 0f) * imageWidth,
                 (b.Top ?? 0f) * imageHeight,
                 (b.Width ?? 0f) * imageWidth,
                 (b.Height ?? 0f) * imageHeight)
             : null,
-        HeadPose = detail.Pose is { } p
+            HeadPose = detail.Pose is { } p
             ? new HeadPose(p.Yaw ?? 0f, p.Pitch ?? 0f, p.Roll ?? 0f)
             : null,
-        Sharpness = (detail.Quality?.Sharpness ?? 0f) / 100d,
-        Brightness = (detail.Quality?.Brightness ?? 0f) / 100d,
-        ImageWidth = imageWidth,
-        ImageHeight = imageHeight,
-        Warnings = []
-    };
+            Sharpness = (detail.Quality?.Sharpness ?? 0f) / 100d,
+            Brightness = (detail.Quality?.Brightness ?? 0f) / 100d,
+            ImageWidth = imageWidth,
+            ImageHeight = imageHeight,
+            Warnings = []
+        };
 }

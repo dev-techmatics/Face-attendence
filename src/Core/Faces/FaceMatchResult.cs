@@ -32,11 +32,11 @@ public sealed class FaceMatchResult
 
     public static FaceMatchResult NoMatch(double threshold, double bestScore = 0d,
         IReadOnlyList<FaceScore>? top = null, FaceCaptureAnalysis? analysis = null) => new()
-    {
-        IsMatch = false,
-        Score = bestScore,
-        Threshold = threshold,
-        TopScores = top ?? [],
-        ProbeAnalysis = analysis
-    };
+        {
+            IsMatch = false,
+            Score = bestScore,
+            Threshold = threshold,
+            TopScores = top ?? [],
+            ProbeAnalysis = analysis
+        };
 }

@@ -1,0 +1,34 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // F5. Builds first, then runs under the debugger. Stopping the debugger (Shift+F5)
+      // terminates the process, which is what keeps the next build from failing on a locked
+      // FaceAttendance.Core.dll.
+      "name": "Run API (Development)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/Api/bin/Debug/net10.0/FaceAttendance.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/Api",
+      "stopAtEntry": false,
+      "console": "internalConsole",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5080"
+      },
+      // Opens the interactive API reference once Kestrel reports it is listening.
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+        "uriFormat": "%s/scalar/v1"
+      }
+    },
+    {
+      "name": "Attach to a running API",
+      "type": "coreclr",
+      "request": "attach"
+    }
+  ]
+}

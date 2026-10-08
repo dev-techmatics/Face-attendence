@@ -22,15 +22,9 @@ public enum FaceError
 /// <see cref="Error"/> onto an HTTP status and a stable machine-readable code so the capture
 /// screen can react without string matching.
 /// </summary>
-public sealed class FaceProcessingException : Exception
+public sealed class FaceProcessingException(FaceError error, string message, Exception? inner = null) : Exception(message, inner)
 {
-    public FaceProcessingException(FaceError error, string message, Exception? inner = null)
-        : base(message, inner)
-    {
-        Error = error;
-    }
-
-    public FaceError Error { get; }
+    public FaceError Error { get; } = error;
 
     public IReadOnlyList<string> Hints { get; init; } = [];
 }

@@ -13,3 +13,16 @@ indent_size = 2
 [*.cs]
 csharp_style_namespace_declarations = file_scoped:suggestion
 dotnet_sort_system_directives_first = true
+
+[*.cs]
+# CA1873 warns that a logging argument might be expensive to evaluate when the level is
+# disabled. Every instance here passes a plain property, GUID or int, so the guard it asks for
+# would add noise and buy nothing - and these are Information and Warning calls, which are
+# enabled in practice. Suppressed deliberately rather than worked around.
+dotnet_diagnostic.CA1873.severity = none
+
+# EF Core writes these. Style rules on generated code produce churn on every
+# `dotnet ef migrations add` and noise in the editor Problems panel.
+[src/Infra/Persistence/Migrations/**.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none

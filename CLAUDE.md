@@ -71,6 +71,10 @@ keeps the engine swappable.
 - **No `stackalloc` inside the detector's decode loops.** The stride-8 head has 12,800 anchors
   and stack from a `stackalloc` is not reclaimed until the method returns.
 
+- **A build failing with MSB3027 "locked by: FaceAttendance.Api" is a running app, not a code
+  error.** It produces 4 errors and 20 warnings from one cause, because MSBuild retries each of
+  the two DLLs ten times. Stop the process and rebuild.
+
 - **`InvariantGlobalization` must stay false.** `Microsoft.Data.SqlClient` refuses to run in
   globalization-invariant mode.
 

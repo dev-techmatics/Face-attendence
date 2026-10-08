@@ -82,7 +82,7 @@ internal sealed class ArcFaceEmbedder : IDisposable
         using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _session.Run(
             [NamedOnnxValue.CreateFromTensor(_inputName, tensor)]);
 
-        float[] embedding = results.First().AsEnumerable<float>().ToArray();
+        float[] embedding = [.. results[0].AsEnumerable<float>()];
 
         // Normalising here means every stored template is a unit vector, so comparison is a
         // plain dot product and thresholds stay comparable across captures.

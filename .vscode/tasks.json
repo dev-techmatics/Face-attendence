@@ -1,0 +1,51 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/FaceAttendance.sln",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "test",
+      "command": "dotnet",
+      "type": "process",
+      "args": ["test", "${workspaceFolder}/FaceAttendance.sln"],
+      "problemMatcher": "$msCompile",
+      "group": { "kind": "test", "isDefault": true }
+    },
+    {
+      // Stops a stray API that is holding the build output open. Run this when a build fails
+      // with MSB3027 "the file is locked by: FaceAttendance.Api".
+      "label": "stop running API",
+      "command": "powershell",
+      "type": "process",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "Get-Process -Name 'FaceAttendance.Api' -ErrorAction SilentlyContinue | Stop-Process -Force; 'done'"
+      ],
+      "problemMatcher": []
+    },
+    {
+      // Needs the API already running, from F5 or `dotnet run`.
+      "label": "smoke test",
+      "command": "powershell",
+      "type": "process",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/scripts/smoke-test.ps1"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

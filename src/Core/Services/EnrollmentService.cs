@@ -118,10 +118,7 @@ public sealed class EnrollmentService(
         await imageStore.SaveAsync(objectKey, command.Image.Content, command.Image.ContentType, ct);
 
         FaceTemplate? previous = await templates.GetActiveForPoseAsync(person.Id, command.Pose, ct);
-        if (previous is not null)
-        {
-            previous.IsActive = false;
-        }
+        previous?.IsActive = false;
 
         FaceTemplate template = new()
         {

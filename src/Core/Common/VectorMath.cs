@@ -78,7 +78,7 @@ public static class VectorMath
         float[] vector = new float[bytes.Length / sizeof(float)];
         for (int i = 0; i < vector.Length; i++)
         {
-            vector[i] = BinaryPrimitives.ReadSingleLittleEndian(bytes.Slice(i * sizeof(float)));
+            vector[i] = BinaryPrimitives.ReadSingleLittleEndian(bytes[(i * sizeof(float))..]);
         }
 
         return vector;

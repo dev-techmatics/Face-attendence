@@ -139,15 +139,15 @@ WarmUpRecognitionProvider(app);
 
 app.Run();
 
-/// <summary>
-/// Build the recognition provider before serving traffic.
-/// </summary>
-/// <remarks>
-/// The provider is a singleton, so without this it is constructed lazily on the first request -
-/// meaning a missing ONNX model file is discovered by the first employee who tries to punch in,
-/// not by the engineer who deployed it. Failing here is loud and immediate, which is what a
-/// configuration error deserves.
-/// </remarks>
+// Builds the recognition provider before serving traffic.
+//
+// The provider is a singleton, so without this it is constructed lazily on the first request -
+// meaning a missing ONNX model file is discovered by the first employee who tries to punch in,
+// not by the engineer who deployed it. Failing here is loud and immediate, which is what a
+// configuration error deserves.
+//
+// Plain comments rather than /// here: XML documentation is not valid on a local function, and
+// top-level statements make these locals.
 static void WarmUpRecognitionProvider(WebApplication app)
 {
     ILogger<Program> logger = app.Services.GetRequiredService<ILogger<Program>>();
@@ -167,11 +167,9 @@ static void WarmUpRecognitionProvider(WebApplication app)
     }
 }
 
-/// <summary>
-/// Apply pending migrations at startup in Development only. In production this belongs in the
-/// deployment pipeline: two instances starting at once would otherwise race each other through
-/// the same schema change.
-/// </summary>
+// Applies pending migrations at startup in Development only. In production this belongs in the
+// deployment pipeline: two instances starting at once would otherwise race each other through
+// the same schema change.
 static async Task MigrateAsync(WebApplication app)
 {
     if (!app.Environment.IsDevelopment() &&

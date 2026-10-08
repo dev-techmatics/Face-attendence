@@ -13,19 +13,12 @@ public enum DomainErrorKind
 /// FaceProcessingException so the API can distinguish "your request was wrong" from
 /// "the image was not usable".
 /// </summary>
-public sealed class DomainException : Exception
+public sealed class DomainException(DomainErrorKind kind, string code, string message) : Exception(message)
 {
-    public DomainException(DomainErrorKind kind, string code, string message)
-        : base(message)
-    {
-        Kind = kind;
-        Code = code;
-    }
-
-    public DomainErrorKind Kind { get; }
+    public DomainErrorKind Kind { get; } = kind;
 
     /// <summary>Stable machine-readable code, e.g. <c>person_not_found</c>.</summary>
-    public string Code { get; }
+    public string Code { get; } = code;
 
     public static DomainException NotFound(string code, string message) =>
         new(DomainErrorKind.NotFound, code, message);

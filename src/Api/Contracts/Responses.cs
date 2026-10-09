@@ -10,7 +10,7 @@ public sealed record PagedResponse<T>(IReadOnlyList<T> Items, int Page, int Page
 }
 
 public sealed record PersonResponse(
-    Guid Id,
+    int Id,
     string ExternalId,
     string FullName,
     string? Email,
@@ -64,9 +64,9 @@ public sealed record AnalysisResponse(
 public sealed record BoxResponse(float X, float Y, float Width, float Height);
 
 public sealed record CaptureFaceResponse(
-    Guid PersonId,
+    int PersonId,
     FacePose Pose,
-    Guid TemplateId,
+    int TemplateId,
     int Version,
     bool ReplacedPrevious,
     EnrollmentStatus EnrollmentStatus,
@@ -83,7 +83,7 @@ public sealed record CaptureFaceResponse(
 }
 
 public sealed record EnrollmentResponse(
-    Guid PersonId,
+    int PersonId,
     string ExternalId,
     string FullName,
     PersonStatus Status,
@@ -106,7 +106,7 @@ public sealed record EnrollmentResponse(
 
 public sealed record PoseResponse(
     FacePose Pose,
-    Guid TemplateId,
+    int TemplateId,
     int Version,
     double QualityScore,
     double DetectionScore,
@@ -125,8 +125,8 @@ public sealed record RegisterPersonResponse(
 public sealed record MarkAttendanceResponse(
     bool Success,
     AttendanceDecision Decision,
-    Guid EventId,
-    Guid? PersonId,
+    int EventId,
+    int? PersonId,
     string? ExternalId,
     string? FullName,
     AttendanceDirection? Direction,
@@ -145,11 +145,11 @@ public sealed record MarkAttendanceResponse(
         [.. r.TopScores.Select(s => new ScoreResponse(s.PersonId, s.Pose, Math.Round(s.Score, 4)))]);
 }
 
-public sealed record ScoreResponse(Guid PersonId, FacePose Pose, double Score);
+public sealed record ScoreResponse(int PersonId, FacePose Pose, double Score);
 
 public sealed record AttendanceEventResponse(
-    Guid Id,
-    Guid? PersonId,
+    int Id,
+    int? PersonId,
     string? ExternalId,
     string? FullName,
     AttendanceDirection Direction,
@@ -170,7 +170,7 @@ public sealed record AttendanceEventResponse(
 
 public sealed record PreviewMatchResponse(
     bool IsMatch,
-    Guid? PersonId,
+    int? PersonId,
     FacePose? Pose,
     double Score,
     double Threshold,

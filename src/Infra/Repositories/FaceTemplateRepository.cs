@@ -9,7 +9,7 @@ namespace FaceAttendance.Infrastructure.Repositories;
 public sealed class FaceTemplateRepository(AppDbContext db) : IFaceTemplateRepository
 {
     public async Task<IReadOnlyList<FaceTemplate>> GetActiveForPersonAsync(
-        Guid personId,
+        int personId,
         CancellationToken ct = default) =>
         await db.FaceTemplates
             .Where(t => t.PersonId == personId && t.IsActive)
@@ -17,14 +17,14 @@ public sealed class FaceTemplateRepository(AppDbContext db) : IFaceTemplateRepos
             .ToListAsync(ct);
 
     public Task<FaceTemplate?> GetActiveForPoseAsync(
-        Guid personId,
+        int personId,
         FacePose pose,
         CancellationToken ct = default) =>
         db.FaceTemplates.FirstOrDefaultAsync(
             t => t.PersonId == personId && t.Pose == pose && t.IsActive, ct);
 
     public async Task<IReadOnlyList<FaceTemplate>> GetAllForPersonAsync(
-        Guid personId,
+        int personId,
         CancellationToken ct = default) =>
         await db.FaceTemplates
             .Where(t => t.PersonId == personId)
@@ -42,7 +42,7 @@ public sealed class FaceTemplateRepository(AppDbContext db) : IFaceTemplateRepos
     public async Task<IReadOnlyList<FaceCandidate>> GetCandidatesAsync(
         string tenantId,
         string providerId,
-        Guid? excludePersonId = null,
+        int? excludePersonId = null,
         CancellationToken ct = default)
     {
         IQueryable<FaceTemplate> query = db.FaceTemplates
@@ -70,7 +70,7 @@ public sealed class FaceTemplateRepository(AppDbContext db) : IFaceTemplateRepos
     }
 
     public async Task<IReadOnlyList<FaceCandidate>> GetCandidatesForPersonAsync(
-        Guid personId,
+        int personId,
         string providerId,
         CancellationToken ct = default) =>
         await db.FaceTemplates
@@ -87,7 +87,7 @@ public sealed class FaceTemplateRepository(AppDbContext db) : IFaceTemplateRepos
             .ToListAsync(ct);
 
     public async Task<int> GetMaxVersionAsync(
-        Guid personId,
+        int personId,
         FacePose pose,
         CancellationToken ct = default)
     {
@@ -102,7 +102,7 @@ public sealed class FaceTemplateRepository(AppDbContext db) : IFaceTemplateRepos
     }
 
     public Task<bool> ImageHashExistsForPersonAsync(
-        Guid personId,
+        int personId,
         string sha256,
         FacePose excludePose,
         CancellationToken ct = default) =>

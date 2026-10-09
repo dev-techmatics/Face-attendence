@@ -6,12 +6,13 @@ namespace FaceAttendance.Core.Domain;
 /// </summary>
 public class AttendanceEvent
 {
-    public Guid Id { get; set; } = Guid.CreateVersion7();
+    /// <summary>Assigned by SQL Server on insert (IDENTITY, starting at 10001). Never set it in code.</summary>
+    public int Id { get; set; }
 
     public string TenantId { get; set; } = "default";
 
     /// <summary>Null when a 1:N identification found nobody.</summary>
-    public Guid? PersonId { get; set; }
+    public int? PersonId { get; set; }
 
     public Person? Person { get; set; }
 
@@ -27,7 +28,7 @@ public class AttendanceEvent
 
     public FacePose? MatchedPose { get; set; }
 
-    public Guid? MatchedTemplateId { get; set; }
+    public int? MatchedTemplateId { get; set; }
 
     public string ProviderId { get; set; } = string.Empty;
 

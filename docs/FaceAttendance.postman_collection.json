@@ -458,7 +458,7 @@
                 "{{externalId}}"
               ]
             },
-            "description": "Look a person up by employee code rather than GUID."
+            "description": "Look a person up by your employee code (EMP-1001) rather than the database number (10001)."
           },
           "response": []
         },

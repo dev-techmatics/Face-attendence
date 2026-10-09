@@ -18,9 +18,10 @@ namespace FaceAttendance.Core.Domain;
 /// </remarks>
 public class FaceTemplate
 {
-    public Guid Id { get; set; } = Guid.CreateVersion7();
+    /// <summary>Assigned by SQL Server on insert (IDENTITY, starting at 10001). Never set it in code.</summary>
+    public int Id { get; set; }
 
-    public Guid PersonId { get; set; }
+    public int PersonId { get; set; }
 
     public Person? Person { get; set; }
 

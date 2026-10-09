@@ -7,7 +7,7 @@ namespace FaceAttendance.Infrastructure.Repositories;
 
 public sealed class PersonRepository(AppDbContext db) : IPersonRepository
 {
-    public async Task<Person?> GetByIdAsync(Guid id, bool includeTemplates = false, CancellationToken ct = default)
+    public async Task<Person?> GetByIdAsync(int id, bool includeTemplates = false, CancellationToken ct = default)
     {
         IQueryable<Person> query = db.People;
 

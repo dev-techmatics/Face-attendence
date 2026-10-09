@@ -23,7 +23,7 @@ public interface IFaceImageStore
     /// Build the canonical key for a registration capture. Keys are derived, never taken from
     /// client input, so a crafted file name cannot escape the store root.
     /// </summary>
-    string BuildEnrollmentKey(string tenantId, Guid personId, string pose, int version, string contentType);
+    string BuildEnrollmentKey(string tenantId, int personId, string pose, int version, string contentType);
 
-    string BuildProbeKey(string tenantId, DateTimeOffset whenUtc, Guid eventId, string contentType);
+    string BuildProbeKey(string tenantId, DateTimeOffset whenUtc, Guid fileId, string contentType);
 }

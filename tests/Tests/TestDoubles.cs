@@ -29,11 +29,11 @@ public sealed class FakeImageStore : IFaceImageStore
     public Task<bool> ExistsAsync(string objectKey, CancellationToken ct = default) =>
         Task.FromResult(Saved.ContainsKey(objectKey));
 
-    public string BuildEnrollmentKey(string tenantId, Guid personId, string pose, int version, string contentType) =>
+    public string BuildEnrollmentKey(string tenantId, int personId, string pose, int version, string contentType) =>
         ObjectKeys.Enrollment(tenantId, personId, pose, version, contentType);
 
-    public string BuildProbeKey(string tenantId, DateTimeOffset whenUtc, Guid eventId, string contentType) =>
-        ObjectKeys.Probe(tenantId, whenUtc, eventId, contentType);
+    public string BuildProbeKey(string tenantId, DateTimeOffset whenUtc, Guid fileId, string contentType) =>
+        ObjectKeys.Probe(tenantId, whenUtc, fileId, contentType);
 }
 
 /// <summary>

@@ -15,7 +15,8 @@ namespace FaceAttendance.Infrastructure.Persistence.Migrations
                 name: "People",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "10001, 1"),
                     TenantId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     ExternalId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     FullName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
@@ -37,15 +38,16 @@ namespace FaceAttendance.Infrastructure.Persistence.Migrations
                 name: "AttendanceEvents",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "10001, 1"),
                     TenantId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
-                    PersonId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    PersonId = table.Column<int>(type: "int", nullable: true),
                     Direction = table.Column<int>(type: "int", nullable: false),
                     Decision = table.Column<int>(type: "int", nullable: false),
                     MatchScore = table.Column<double>(type: "float", nullable: false),
                     Threshold = table.Column<double>(type: "float", nullable: false),
                     MatchedPose = table.Column<int>(type: "int", nullable: true),
-                    MatchedTemplateId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    MatchedTemplateId = table.Column<int>(type: "int", nullable: true),
                     ProviderId = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
                     ProbeImageObjectKey = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
                     FailureReason = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: true),
@@ -71,8 +73,9 @@ namespace FaceAttendance.Infrastructure.Persistence.Migrations
                 name: "FaceTemplates",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    PersonId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "10001, 1"),
+                    PersonId = table.Column<int>(type: "int", nullable: false),
                     Pose = table.Column<int>(type: "int", nullable: false),
                     ProviderId = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
                     Dimension = table.Column<int>(type: "int", nullable: false),

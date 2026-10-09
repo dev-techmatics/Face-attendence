@@ -10,7 +10,7 @@ public sealed class AttendanceRepository(AppDbContext db) : IAttendanceRepositor
     public async Task AddAsync(AttendanceEvent attendanceEvent, CancellationToken ct = default) =>
         await db.AttendanceEvents.AddAsync(attendanceEvent, ct);
 
-    public Task<AttendanceEvent?> GetLastAcceptedAsync(Guid personId, CancellationToken ct = default) =>
+    public Task<AttendanceEvent?> GetLastAcceptedAsync(int personId, CancellationToken ct = default) =>
         db.AttendanceEvents
             .Where(e => e.PersonId == personId && e.Decision == AttendanceDecision.Accepted)
             .OrderByDescending(e => e.CreatedAtUtc)
@@ -18,7 +18,7 @@ public sealed class AttendanceRepository(AppDbContext db) : IAttendanceRepositor
             .FirstOrDefaultAsync(ct);
 
     public Task<AttendanceEvent?> GetLastAcceptedInWindowAsync(
-        Guid personId,
+        int personId,
         AttendanceDirection? direction,
         DateTimeOffset notBefore,
         CancellationToken ct = default) =>
@@ -33,7 +33,7 @@ public sealed class AttendanceRepository(AppDbContext db) : IAttendanceRepositor
 
     public async Task<(IReadOnlyList<AttendanceEvent> Items, int Total)> QueryAsync(
         string tenantId,
-        Guid? personId,
+        int? personId,
         DateTimeOffset? fromUtc,
         DateTimeOffset? toUtc,
         AttendanceDecision? decision,

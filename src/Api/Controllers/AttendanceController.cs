@@ -116,7 +116,7 @@ public sealed class AttendanceController(
     [Authorize(Policy = Policies.Admin)]
     [ProducesResponseType<PagedResponse<AttendanceEventResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResponse<AttendanceEventResponse>>> Query(
-        [FromQuery] Guid? personId,
+        [FromQuery] int? personId,
         [FromQuery] DateTimeOffset? fromUtc,
         [FromQuery] DateTimeOffset? toUtc,
         [FromQuery] AttendanceDecision? decision,

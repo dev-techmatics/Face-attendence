@@ -86,7 +86,7 @@ public sealed class MarkAttendanceRequest
     /// the call into a 1:1 verification, which is both faster and markedly more accurate than
     /// searching the whole population.
     /// </summary>
-    public Guid? PersonId { get; init; }
+    public int? PersonId { get; init; }
 
     public string? ExternalId { get; init; }
 
@@ -111,5 +111,5 @@ public sealed class PreviewMatchRequest
     [Required]
     public IFormFile Image { get; init; } = default!;
 
-    public Guid? PersonId { get; init; }
+    public int? PersonId { get; init; }
 }

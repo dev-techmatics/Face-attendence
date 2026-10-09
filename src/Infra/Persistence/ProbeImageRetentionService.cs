@@ -98,7 +98,7 @@ public sealed class ProbeImageRetentionService(
 
             // Clear the keys in bulk after the files are gone. Doing it in this order means a
             // crash leaves an orphaned file, not a row pointing at a file that no longer exists.
-            List<Guid> ids = [.. expired.Select(r => r.Id)];
+            List<int> ids = [.. expired.Select(r => r.Id)];
 
             await db.AttendanceEvents
                 .Where(e => ids.Contains(e.Id))

@@ -2,15 +2,15 @@ using FaceAttendance.Core.Domain;
 
 namespace FaceAttendance.Core.Faces;
 
-public sealed record FaceScore(Guid PersonId, Guid TemplateId, FacePose Pose, double Score);
+public sealed record FaceScore(int PersonId, int TemplateId, FacePose Pose, double Score);
 
 public sealed class FaceMatchResult
 {
     public bool IsMatch { get; init; }
 
-    public Guid? PersonId { get; init; }
+    public int? PersonId { get; init; }
 
-    public Guid? TemplateId { get; init; }
+    public int? TemplateId { get; init; }
 
     public FacePose? Pose { get; init; }
 

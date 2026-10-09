@@ -44,7 +44,6 @@ public sealed class AttendanceService(
     {
         long startedAt = Stopwatch.GetTimestamp();
         DateTimeOffset now = clock.UtcNow;
-        Guid eventId = Guid.CreateVersion7();
 
         validator.ValidateUpload(command.Image);
 
@@ -57,7 +56,7 @@ public sealed class AttendanceService(
         if (oneToOne && !claimed!.CanMarkAttendance)
         {
             return await RecordAsync(
-                eventId, command, now, startedAt, claimed,
+                command, now, startedAt, claimed,
                 claimed.EnrollmentStatus == EnrollmentStatus.Enrolled
                     ? AttendanceDecision.Rejected
                     : AttendanceDecision.NotEnrolled,
@@ -73,7 +72,7 @@ public sealed class AttendanceService(
         if (candidates.Count == 0)
         {
             return await RecordAsync(
-                eventId, command, now, startedAt, claimed, AttendanceDecision.NotEnrolled,
+                command, now, startedAt, claimed, AttendanceDecision.NotEnrolled,
                 score: 0, threshold, null, null,
                 oneToOne
                     ? "No usable templates for this person under the active provider."
@@ -89,27 +88,27 @@ public sealed class AttendanceService(
         catch (FaceProcessingException ex) when (ex.Error is FaceError.NoFaceDetected)
         {
             return await RecordAsync(
-                eventId, command, now, startedAt, claimed, AttendanceDecision.NoFaceDetected,
+                command, now, startedAt, claimed, AttendanceDecision.NoFaceDetected,
                 0, threshold, null, null, ex.Message, [], ct);
         }
         catch (FaceProcessingException ex) when (ex.Error is FaceError.LowQuality or FaceError.MultipleFacesDetected)
         {
             return await RecordAsync(
-                eventId, command, now, startedAt, claimed, AttendanceDecision.LowQuality,
+                command, now, startedAt, claimed, AttendanceDecision.LowQuality,
                 0, threshold, null, null, ex.Message, [], ct);
         }
         catch (FaceProcessingException ex)
         {
             logger.LogError(ex, "Provider failed during attendance match");
             return await RecordAsync(
-                eventId, command, now, startedAt, claimed, AttendanceDecision.ProviderError,
+                command, now, startedAt, claimed, AttendanceDecision.ProviderError,
                 0, threshold, null, null, ex.Message, [], ct);
         }
 
         if (!match.IsMatch)
         {
             return await RecordAsync(
-                eventId, command, now, startedAt, claimed, AttendanceDecision.Rejected,
+                command, now, startedAt, claimed, AttendanceDecision.Rejected,
                 match.Score, threshold, null, null,
                 $"Best score {match.Score:F3} did not reach the {threshold:F3} threshold.",
                 match.TopScores, ct, includeDiagnostics);
@@ -119,7 +118,7 @@ public sealed class AttendanceService(
         if (!oneToOne && match.Margin is { } margin && margin < _options.IdentificationMargin)
         {
             return await RecordAsync(
-                eventId, command, now, startedAt, claimed, AttendanceDecision.Rejected,
+                command, now, startedAt, claimed, AttendanceDecision.Rejected,
                 match.Score, threshold, match.Pose, match.TemplateId,
                 $"Top two candidates were only {margin:F3} apart; below the required " +
                 $"{_options.IdentificationMargin:F3} margin. Ask the user to identify themselves first.",
@@ -142,7 +141,7 @@ public sealed class AttendanceService(
             if (recent is not null)
             {
                 return await RecordAsync(
-                    eventId, command, now, startedAt, matched, AttendanceDecision.Duplicate,
+                    command, now, startedAt, matched, AttendanceDecision.Duplicate,
                     match.Score, threshold, match.Pose, match.TemplateId,
                     $"Already marked {recent.Direction} at {recent.CreatedAtUtc:O}, inside the " +
                     $"{_options.DuplicatePunchWindowMinutes}-minute window.",
@@ -153,7 +152,7 @@ public sealed class AttendanceService(
         AttendanceDirection direction = await ResolveDirectionAsync(command, matched, ct);
 
         return await RecordAsync(
-            eventId, command, now, startedAt, matched, AttendanceDecision.Accepted,
+            command, now, startedAt, matched, AttendanceDecision.Accepted,
             match.Score, threshold, match.Pose, match.TemplateId, null,
             match.TopScores, ct, includeDiagnostics, direction);
     }
@@ -164,7 +163,7 @@ public sealed class AttendanceService(
     /// </summary>
     public async Task<FaceMatchResult> PreviewMatchAsync(
         string tenantId,
-        Guid? personId,
+        int? personId,
         FaceImage image,
         CancellationToken ct = default)
     {
@@ -242,7 +241,6 @@ public sealed class AttendanceService(
     }
 
     private async Task<MarkAttendanceResult> RecordAsync(
-        Guid eventId,
         MarkAttendanceCommand command,
         DateTimeOffset now,
         long startedAt,
@@ -251,7 +249,7 @@ public sealed class AttendanceService(
         double score,
         double threshold,
         FacePose? matchedPose,
-        Guid? matchedTemplateId,
+        int? matchedTemplateId,
         string? failureReason,
         IReadOnlyList<FaceScore> topScores,
         CancellationToken ct,
@@ -263,7 +261,9 @@ public sealed class AttendanceService(
         string? probeKey = null;
         if (_options.StoreProbeImages)
         {
-            probeKey = imageStore.BuildProbeKey(command.TenantId, now, eventId, command.Image.ContentType);
+            // Written before the row is inserted, so the row's number does not exist yet. A random
+            // token names the file instead; the row records the path, which is what links them.
+            probeKey = imageStore.BuildProbeKey(command.TenantId, now, Guid.NewGuid(), command.Image.ContentType);
             try
             {
                 await imageStore.SaveAsync(probeKey, command.Image.Content, command.Image.ContentType, ct);
@@ -280,7 +280,6 @@ public sealed class AttendanceService(
 
         AttendanceEvent record = new()
         {
-            Id = eventId,
             TenantId = command.TenantId,
             PersonId = person?.Id,
             Direction = resolvedDirection,

@@ -13,17 +13,17 @@ public sealed record CreatePersonCommand(
 /// <summary>One pose upload. All three uploads for a person carry the same PersonId.</summary>
 public sealed record CaptureFaceCommand(
     string TenantId,
-    Guid PersonId,
+    int PersonId,
     FacePose Pose,
     FaceImage Image);
 
 public sealed class CaptureFaceResult
 {
-    public required Guid PersonId { get; init; }
+    public required int PersonId { get; init; }
 
     public required FacePose Pose { get; init; }
 
-    public required Guid TemplateId { get; init; }
+    public required int TemplateId { get; init; }
 
     public required int Version { get; init; }
 
@@ -48,7 +48,7 @@ public sealed class CaptureFaceResult
 
 public sealed class EnrollmentSummary
 {
-    public required Guid PersonId { get; init; }
+    public required int PersonId { get; init; }
 
     public required string ExternalId { get; init; }
 
@@ -72,7 +72,7 @@ public sealed class EnrollmentSummary
 
 public sealed record CapturedPoseInfo(
     FacePose Pose,
-    Guid TemplateId,
+    int TemplateId,
     int Version,
     double QualityScore,
     double DetectionScore,
@@ -90,7 +90,7 @@ public sealed record MarkAttendanceCommand
     /// Supply PersonId or ExternalId for a 1:1 verification (fast, and much safer). Leave both
     /// null for a 1:N identification across the tenant.
     /// </summary>
-    public Guid? PersonId { get; init; }
+    public int? PersonId { get; init; }
 
     public string? ExternalId { get; init; }
 
@@ -114,9 +114,9 @@ public sealed class MarkAttendanceResult
 
     public required AttendanceDecision Decision { get; init; }
 
-    public required Guid EventId { get; init; }
+    public required int EventId { get; init; }
 
-    public Guid? PersonId { get; init; }
+    public int? PersonId { get; init; }
 
     public string? ExternalId { get; init; }
 

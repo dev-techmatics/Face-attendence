@@ -7,7 +7,8 @@ namespace FaceAttendance.Core.Domain;
 /// </summary>
 public class Person
 {
-    public Guid Id { get; set; } = Guid.CreateVersion7();
+    /// <summary>Assigned by SQL Server on insert (IDENTITY, starting at 10001). Never set it in code.</summary>
+    public int Id { get; set; }
 
     /// <summary>Tenant / organisation scope. Keeps one deployment usable by several sites.</summary>
     public string TenantId { get; set; } = "default";

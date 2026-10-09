@@ -213,18 +213,18 @@ foreach ($id in @($aliceId, $bobId, $fraudId)) { Reset-TestPerson $id | Out-Null
 
 $alice = Register-TestPerson $aliceId 'Alice Kumar' 'alice'
 Check 'three poses register in one call' $alice.Ok $alice.Detail
-$personGuid = $alice.PersonId
+$personId = $alice.PersonId
 
 $bob = Register-TestPerson $bobId 'Bob Singh' 'bob'
 Check 'a second person registers' $bob.Ok $bob.Detail
 
-$aliceState = Send-Api GET "/api/v1/persons/$personGuid/enrollment"
+$aliceState = Send-Api GET "/api/v1/persons/$personId/enrollment"
 Check 'the person is Enrolled' ($aliceState.Data.enrollmentStatus -eq 'Enrolled') `
     "status $($aliceState.Data.enrollmentStatus)"
 Check 'all three poses are stored' ($aliceState.Data.poses.Count -eq 3) `
     "got $($aliceState.Data.poses.Count)"
 
-$enrollment = Send-Api GET "/api/v1/persons/$personGuid/enrollment"
+$enrollment = Send-Api GET "/api/v1/persons/$personId/enrollment"
 Check 'enrollment reports no missing poses' ($enrollment.Data.missingPoses.Count -eq 0)
 Check 'every stored template belongs to the active provider' `
     (@($enrollment.Data.poses | Where-Object { -not $_.providerMatchesCurrent }).Count -eq 0)
@@ -240,7 +240,7 @@ Write-Host 'Attendance' -ForegroundColor White
 # A re-run inside the duplicate-punch window will legitimately be collapsed rather than
 # accepted, so work out which answer is correct before asserting one.
 $window = [int]$provider.Data.duplicatePunchWindowMinutes
-$recent = Send-Api GET ("/api/v1/attendance?personId=$personGuid&decision=Accepted&pageSize=1")
+$recent = Send-Api GET ("/api/v1/attendance?personId=$personId&decision=Accepted&pageSize=1")
 $insideWindow = $false
 
 if ($window -gt 0 -and $recent.Data.items.Count -gt 0) {
@@ -317,7 +317,7 @@ $orphan = Send-Api GET "/api/v1/persons/by-external-id/$Prefix-9999"
 Check 'the rejected registration left no orphan person (404)' ($orphan.Status -eq 404) `
     "status $($orphan.Status) - a person row with no usable face would occupy the employee id"
 
-$sameFrame = Send-Api POST "/api/v1/persons/$personGuid/faces" `
+$sameFrame = Send-Api POST "/api/v1/persons/$personId/faces" `
     -Fields @{ pose = 'Front' } `
     -Files @{ image = Resolve-Sample 'alice-left' }
 

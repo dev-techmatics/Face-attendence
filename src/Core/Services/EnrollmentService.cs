@@ -185,7 +185,7 @@ public sealed class EnrollmentService(
     /// </summary>
     public async Task<IReadOnlyList<CaptureFaceResult>> CaptureManyAsync(
         string tenantId,
-        Guid personId,
+        int personId,
         IReadOnlyList<(FacePose Pose, FaceImage Image)> captures,
         CancellationToken ct = default)
     {
@@ -220,7 +220,7 @@ public sealed class EnrollmentService(
 
     public async Task<EnrollmentSummary> GetEnrollmentAsync(
         string tenantId,
-        Guid personId,
+        int personId,
         CancellationToken ct = default)
     {
         Person person = await LoadPersonAsync(tenantId, personId, ct);
@@ -263,7 +263,7 @@ public sealed class EnrollmentService(
     /// <summary>Retire one pose. The person drops back to InProgress if it was required.</summary>
     public async Task DeletePoseAsync(
         string tenantId,
-        Guid personId,
+        int personId,
         FacePose pose,
         CancellationToken ct = default)
     {
@@ -292,7 +292,7 @@ public sealed class EnrollmentService(
     /// </summary>
     public async Task PurgeBiometricsAsync(
         string tenantId,
-        Guid personId,
+        int personId,
         CancellationToken ct = default)
     {
         Person person = await LoadPersonAsync(tenantId, personId, ct);
@@ -364,7 +364,7 @@ public sealed class EnrollmentService(
         }
     }
 
-    private async Task<Person> LoadPersonAsync(string tenantId, Guid personId, CancellationToken ct)
+    private async Task<Person> LoadPersonAsync(string tenantId, int personId, CancellationToken ct)
     {
         Person person = await people.GetByIdAsync(personId, includeTemplates: false, ct)
             ?? throw DomainException.NotFound("person_not_found", $"Person {personId} was not found.");

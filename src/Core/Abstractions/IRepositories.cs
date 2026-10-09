@@ -5,7 +5,7 @@ namespace FaceAttendance.Core.Abstractions;
 
 public interface IPersonRepository
 {
-    Task<Person?> GetByIdAsync(Guid id, bool includeTemplates = false, CancellationToken ct = default);
+    Task<Person?> GetByIdAsync(int id, bool includeTemplates = false, CancellationToken ct = default);
 
     Task<Person?> GetByExternalIdAsync(string tenantId, string externalId, bool includeTemplates = false, CancellationToken ct = default);
 
@@ -26,11 +26,11 @@ public interface IPersonRepository
 
 public interface IFaceTemplateRepository
 {
-    Task<IReadOnlyList<FaceTemplate>> GetActiveForPersonAsync(Guid personId, CancellationToken ct = default);
+    Task<IReadOnlyList<FaceTemplate>> GetActiveForPersonAsync(int personId, CancellationToken ct = default);
 
-    Task<FaceTemplate?> GetActiveForPoseAsync(Guid personId, FacePose pose, CancellationToken ct = default);
+    Task<FaceTemplate?> GetActiveForPoseAsync(int personId, FacePose pose, CancellationToken ct = default);
 
-    Task<IReadOnlyList<FaceTemplate>> GetAllForPersonAsync(Guid personId, CancellationToken ct = default);
+    Task<IReadOnlyList<FaceTemplate>> GetAllForPersonAsync(int personId, CancellationToken ct = default);
 
     Task AddAsync(FaceTemplate template, CancellationToken ct = default);
 
@@ -39,24 +39,24 @@ public interface IFaceTemplateRepository
     Task<IReadOnlyList<FaceCandidate>> GetCandidatesAsync(
         string tenantId,
         string providerId,
-        Guid? excludePersonId = null,
+        int? excludePersonId = null,
         CancellationToken ct = default);
 
     Task<IReadOnlyList<FaceCandidate>> GetCandidatesForPersonAsync(
-        Guid personId,
+        int personId,
         string providerId,
         CancellationToken ct = default);
 
-    Task<int> GetMaxVersionAsync(Guid personId, FacePose pose, CancellationToken ct = default);
+    Task<int> GetMaxVersionAsync(int personId, FacePose pose, CancellationToken ct = default);
 
-    Task<bool> ImageHashExistsForPersonAsync(Guid personId, string sha256, FacePose excludePose, CancellationToken ct = default);
+    Task<bool> ImageHashExistsForPersonAsync(int personId, string sha256, FacePose excludePose, CancellationToken ct = default);
 }
 
 public interface IAttendanceRepository
 {
     Task AddAsync(AttendanceEvent attendanceEvent, CancellationToken ct = default);
 
-    Task<AttendanceEvent?> GetLastAcceptedAsync(Guid personId, CancellationToken ct = default);
+    Task<AttendanceEvent?> GetLastAcceptedAsync(int personId, CancellationToken ct = default);
 
     /// <summary>
     /// Most recent accepted event for a person since <paramref name="notBefore"/>. A null
@@ -64,14 +64,14 @@ public interface IAttendanceRepository
     /// needs: the second tap has not been assigned a direction yet.
     /// </summary>
     Task<AttendanceEvent?> GetLastAcceptedInWindowAsync(
-        Guid personId,
+        int personId,
         AttendanceDirection? direction,
         DateTimeOffset notBefore,
         CancellationToken ct = default);
 
     Task<(IReadOnlyList<AttendanceEvent> Items, int Total)> QueryAsync(
         string tenantId,
-        Guid? personId,
+        int? personId,
         DateTimeOffset? fromUtc,
         DateTimeOffset? toUtc,
         AttendanceDecision? decision,

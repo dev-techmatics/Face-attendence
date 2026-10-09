@@ -75,6 +75,13 @@ keeps the engine swappable.
   error.** It produces 4 errors and 20 warnings from one cause, because MSBuild retries each of
   the two DLLs ten times. Stop the process and rebuild.
 
+- **Primary keys are `int IDENTITY(10001, 1)`, assigned by SQL Server on insert.** Never set
+  `Id` in code; read it after `SaveChangesAsync`. The seed lives in `AppDbContext.IdentitySeed`.
+  Expect gaps (rolled-back registrations, SQL Server restarts). The one exception is the probe
+  photo file name, which uses a random `Guid` because it is written before its row exists.
+  Changing a key type needs a fresh migration — SQL Server cannot alter a column into an
+  identity in place.
+
 - **`InvariantGlobalization` must stay false.** `Microsoft.Data.SqlClient` refuses to run in
   globalization-invariant mode.
 

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FaceAttendance.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261008094913_InitialSchema")]
+    [Migration("20261009062153_InitialSchema")]
     partial class InitialSchema
     {
         /// <inheritdoc />
@@ -27,9 +27,11 @@ namespace FaceAttendance.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("FaceAttendance.Core.Domain.AttendanceEvent", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 10001L);
 
                     b.Property<DateTimeOffset?>("CapturedAtUtc")
                         .HasColumnType("datetimeoffset");
@@ -63,11 +65,11 @@ namespace FaceAttendance.Infrastructure.Persistence.Migrations
                     b.Property<int?>("MatchedPose")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("MatchedTemplateId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int?>("MatchedTemplateId")
+                        .HasColumnType("int");
 
-                    b.Property<Guid?>("PersonId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int?>("PersonId")
+                        .HasColumnType("int");
 
                     b.Property<string>("ProbeImageObjectKey")
                         .HasMaxLength(512)
@@ -105,9 +107,11 @@ namespace FaceAttendance.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("FaceAttendance.Core.Domain.FaceTemplate", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 10001L);
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("datetimeoffset");
@@ -145,8 +149,8 @@ namespace FaceAttendance.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<Guid>("PersonId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("PersonId")
+                        .HasColumnType("int");
 
                     b.Property<int>("Pose")
                         .HasColumnType("int");
@@ -188,9 +192,11 @@ namespace FaceAttendance.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("FaceAttendance.Core.Domain.Person", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 10001L);
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("datetimeoffset");

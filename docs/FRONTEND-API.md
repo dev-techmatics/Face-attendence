@@ -69,19 +69,30 @@ refused until real keys are configured there.
 
 ### IDs — which are created automatically and which you send
 
-**All database IDs are generated automatically by the API.** You never send an ID when creating
-something. If a request includes an `id` field anyway, it is ignored — this was tested: sending
-`"id": "11111111-1111-1111-1111-111111111111"` produced a new API-generated ID instead, and that
-new ID is what SQL Server stored.
+**All database IDs are created automatically by SQL Server.** They are short whole numbers that
+start at **10001** and go up by 1 for each new record: `10001`, `10002`, `10003`…
 
-| Field | What it is | Who creates it | Do you send it? |
-|---|---|---|---|
-| `person.id` (also called `personId`) | The person's database ID (GUID) | **API, automatically** when you call endpoint 1 | Never when creating. You send it **back** later in the URL of endpoint 3, to say *which* person |
-| `templateId` | ID of each stored photo | **API, automatically** | Never |
-| `eventId` | ID of each attendance attempt | **API, automatically** when you call endpoint 4 | Never |
-| `externalId` | **Your own** employee / student code (e.g. `EMP-1001`) | **You** | **Yes**, on endpoint 1. It is not a database key — it is your code from your own HR system, so both systems can refer to the same person. It must be unique |
+Each table counts on its own, so the first person, the first photo and the first attendance
+record can all be `10001`.
 
-IDs look like `01a11f39-a5bc-73f2-88df-92b888fc150a` (GUID v7, time-ordered).
+**You never send an ID when creating something.** If a request includes an `id` field anyway, it
+is ignored — this was tested: sending `"id": 5` produced `10003`, the next number in sequence.
+
+| Field | What it is | Example | Who creates it | Do you send it? |
+|---|---|---|---|---|
+| `person.id` (also called `personId`) | The person's database ID | `10001` | **SQL Server, automatically**, when you call endpoint 1 | Never when creating. You send it **back** later in the URL of endpoint 3, to say *which* person |
+| `templateId` | ID of each stored photo | `10001` | **SQL Server, automatically** | Never |
+| `eventId` | ID of each attendance attempt | `10001` | **SQL Server, automatically**, when you call endpoint 4 | Never |
+| `externalId` | **Your own** employee / student code | `EMP-1001` | **You** | **Yes**, on endpoint 1. It is not a database ID — it is your code from your own HR system, so both systems can refer to the same person. Must be unique |
+
+Three things to know about these numbers:
+
+- **They are numbers in JSON, not text:** `"id": 10001`, not `"id": "10001"`. Store them as
+  numbers (`int`) in the app.
+- **There can be gaps.** A registration that fails still uses up a number, and SQL Server may skip
+  ahead after a restart. `10001, 10002, 10004` is normal. Never assume the next ID.
+- **`personId` and `externalId` are different things.** `10001` is the database's number;
+  `EMP-1001` is yours. Endpoint 3 needs the number.
 
 ### Two rules that apply to every endpoint
 
@@ -211,7 +222,7 @@ The fields the app needs:
 
 | Field | Example | Meaning |
 |---|---|---|
-| `person.id` | `01a11f39-a5bc-73f2-88df-92b888fc150a` | **Save this.** The ID the API created for this person |
+| `person.id` | `10001` | **Save this.** The ID the API created for this person |
 | `person.externalId` | `EMP-1001` | The code you sent |
 | `enrollmentStatus` | `Enrolled` | `Enrolled` = ready to mark attendance |
 | `enrollmentCompleted` | `true` | `true` = all 3 photos accepted |
@@ -219,7 +230,7 @@ The fields the app needs:
 ```json
 {
   "person": {
-    "id": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+    "id": 10001,
     "externalId": "EMP-1001",
     "fullName": "Alice Kumar",
     "email": "alice.kumar@company.com",
@@ -241,7 +252,7 @@ The fields the app needs:
 ```json
 {
   "person": {
-    "id": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+    "id": 10001,
     "externalId": "EMP-1001",
     "fullName": "Alice Kumar",
     "email": "alice.kumar@company.com",
@@ -253,9 +264,9 @@ The fields the app needs:
   },
   "captures": [
     {
-      "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+      "personId": 10001,
       "pose": "Front",
-      "templateId": "01a11f39-a6db-7062-9b18-a894c2763d00",
+      "templateId": 10001,
       "version": 1,
       "replacedPrevious": false,
       "enrollmentStatus": "InProgress",
@@ -281,9 +292,9 @@ The fields the app needs:
       "warnings": [ "Development provider: no real face analysis was performed." ]
     },
     {
-      "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+      "personId": 10001,
       "pose": "Left",
-      "templateId": "01a11f39-a751-738a-96ac-1fd32340aee1",
+      "templateId": 10002,
       "version": 1,
       "replacedPrevious": false,
       "enrollmentStatus": "InProgress",
@@ -309,9 +320,9 @@ The fields the app needs:
       "warnings": [ "Development provider: no real face analysis was performed." ]
     },
     {
-      "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+      "personId": 10001,
       "pose": "Right",
-      "templateId": "01a11f39-a75c-751e-896d-a33d6390ad93",
+      "templateId": 10003,
       "version": 1,
       "replacedPrevious": false,
       "enrollmentStatus": "Enrolled",
@@ -406,7 +417,7 @@ Same face already registered under another code — `409`:
   "code": "duplicate_identity",
   "hints": [
     "If this person is genuinely new, an operator should review the existing record.",
-    "Conflicting person id: 01a11f39-a5bc-73f2-88df-92b888fc150a"
+    "Conflicting person id: 10001"
   ],
   "traceId": "00-a56af66bfb2777b24d8da9044ae53c5f-a0b6592fb10b43c9-00"
 }
@@ -417,7 +428,7 @@ Same face already registered under another code — `409`:
 ## 2. Find a person by employee ID
 
 **What it does:** returns a person using **your** employee code — useful because the app usually
-knows `EMP-1001`, not the GUID. **Used by:** registration screen, admin screens.
+knows `EMP-1001`, not the database number `10001`. **Used by:** registration screen, admin screens.
 
 | Item | Value |
 |---|---|
@@ -460,7 +471,7 @@ curl http://localhost:5080/api/v1/persons/by-external-id/EMP-1001 \
 
 ```json
 {
-  "id": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+  "id": 10001,
   "externalId": "EMP-1001",
   "fullName": "Alice Kumar",
   "email": "alice.kumar@company.com",
@@ -474,7 +485,7 @@ curl http://localhost:5080/api/v1/persons/by-external-id/EMP-1001 \
 
 | Field | Meaning |
 |---|---|
-| `id` | The `personId` (needed for endpoint 3) |
+| `id` | The `personId` — a number such as `10001` (needed for endpoint 3) |
 | `status` | `Active`, `Suspended` or `Archived` |
 | `enrollmentStatus` | `Enrolled` = ready for attendance. See endpoint 3 for all values |
 
@@ -521,7 +532,7 @@ attendance. **Used by:** registration screen (after registering, or to resume a 
 
 | Parameter | Required | Example value | Where to get it |
 |---|---|---|---|
-| `personId` | **Yes** | `01a11f39-a5bc-73f2-88df-92b888fc150a` | `person.id` from endpoint 1, or `id` from endpoint 2. Must be a full GUID — `EMP-1001` will not work here |
+| `personId` | **Yes** | `10001` | `person.id` from endpoint 1, or `id` from endpoint 2. A number such as `10001` — `EMP-1001` will not work here |
 
 ### Query parameters
 
@@ -534,19 +545,19 @@ None.
 ### Example request
 
 ```bash
-curl http://localhost:5080/api/v1/persons/01a11f39-a5bc-73f2-88df-92b888fc150a/enrollment \
+curl http://localhost:5080/api/v1/persons/10001/enrollment \
   -H "X-Api-Key: dev-admin-key"
 ```
 
 **Postman:** Method **GET** · URL
-`http://localhost:5080/api/v1/persons/01a11f39-a5bc-73f2-88df-92b888fc150a/enrollment`
-(replace the GUID with yours) · **Headers** tab: `X-Api-Key` = `dev-admin-key` · no body.
+`http://localhost:5080/api/v1/persons/10001/enrollment`
+(replace `10001` with your person ID) · **Headers** tab: `X-Api-Key` = `dev-admin-key` · no body.
 
 ### Success response — `200 OK`
 
 ```json
 {
-  "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+  "personId": 10001,
   "externalId": "EMP-1001",
   "fullName": "Alice Kumar",
   "status": "Active",
@@ -555,7 +566,7 @@ curl http://localhost:5080/api/v1/persons/01a11f39-a5bc-73f2-88df-92b888fc150a/e
   "poses": [
     {
       "pose": "Front",
-      "templateId": "01a11f39-a6db-7062-9b18-a894c2763d00",
+      "templateId": 10001,
       "version": 1,
       "qualityScore": 0.9,
       "detectionScore": 0.99,
@@ -565,7 +576,7 @@ curl http://localhost:5080/api/v1/persons/01a11f39-a5bc-73f2-88df-92b888fc150a/e
     },
     {
       "pose": "Left",
-      "templateId": "01a11f39-a751-738a-96ac-1fd32340aee1",
+      "templateId": 10002,
       "version": 1,
       "qualityScore": 0.9,
       "detectionScore": 0.99,
@@ -575,7 +586,7 @@ curl http://localhost:5080/api/v1/persons/01a11f39-a5bc-73f2-88df-92b888fc150a/e
     },
     {
       "pose": "Right",
-      "templateId": "01a11f39-a75c-751e-896d-a33d6390ad93",
+      "templateId": 10003,
       "version": 1,
       "qualityScore": 0.9,
       "detectionScore": 0.99,
@@ -608,7 +619,7 @@ curl http://localhost:5080/api/v1/persons/01a11f39-a5bc-73f2-88df-92b888fc150a/e
 | `401` | — | `X-Api-Key` missing or wrong |
 | `403` | — | Device key used |
 | `404` | `person_not_found` | No person with that ID |
-| `404` | — (empty body) | `personId` is not a valid GUID |
+| `404` | — (empty body) | `personId` is not a number |
 
 ---
 
@@ -645,7 +656,7 @@ None.
 |---|---|---|---|---|
 | `image` | **File** | **Yes** | `alice-front.jpg` | The live camera photo. Same photo rules as registration |
 | `externalId` | Text | **Recommended** | `EMP-1001` | Who is claiming to be here (from a badge, PIN or name picker). Makes the check much more accurate |
-| `personId` | Text | No | `01a11f39-a5bc-73f2-88df-92b888fc150a` | Alternative to `externalId`. If both are sent, `personId` is used |
+| `personId` | Text | No | `10001` | Alternative to `externalId`. If both are sent, `personId` is used |
 | `deviceId` | Text | No | `GATE-A` | Which kiosk sent it. Shows up in reports. Max 128 characters |
 | `latitude` | Number | No | `19.0760` | −90 to 90 |
 | `longitude` | Number | No | `72.8777` | −180 to 180 |
@@ -692,8 +703,8 @@ Accepted:
 {
   "success": true,
   "decision": "Accepted",
-  "eventId": "01a11f39-a9a2-73d8-9f00-5cfc81deb8a9",
-  "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+  "eventId": 10001,
+  "personId": 10001,
   "externalId": "EMP-1001",
   "fullName": "Alice Kumar",
   "direction": "In",
@@ -703,7 +714,7 @@ Accepted:
   "recordedAtUtc": "2026-10-09T05:53:55.1068887+00:00",
   "processingMs": 86,
   "topScores": [
-    { "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a", "pose": "Left", "score": 1 }
+    { "personId": 10001, "pose": "Left", "score": 1 }
   ]
 }
 ```
@@ -714,8 +725,8 @@ Same person again within 2 minutes:
 {
   "success": false,
   "decision": "Duplicate",
-  "eventId": "01a11f39-aa9b-71fa-8eee-f49c94bf58f6",
-  "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+  "eventId": 10002,
+  "personId": 10001,
   "externalId": "EMP-1001",
   "fullName": "Alice Kumar",
   "score": 1,
@@ -725,7 +736,7 @@ Same person again within 2 minutes:
   "message": "Already marked In at 2026-10-09T05:53:55.1068887+00:00, inside the 2-minute window.",
   "processingMs": 8,
   "topScores": [
-    { "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a", "pose": "Left", "score": 1 }
+    { "personId": 10001, "pose": "Left", "score": 1 }
   ]
 }
 ```
@@ -736,8 +747,8 @@ Face does not match the claimed person:
 {
   "success": false,
   "decision": "Rejected",
-  "eventId": "01a11f39-ab39-7ae1-b8e3-f1a677d89315",
-  "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+  "eventId": 10003,
+  "personId": 10001,
   "externalId": "EMP-1001",
   "fullName": "Alice Kumar",
   "score": -0.0101,
@@ -746,7 +757,7 @@ Face does not match the claimed person:
   "message": "Best score -0.010 did not reach the 0.420 threshold.",
   "processingMs": 3,
   "topScores": [
-    { "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a", "pose": "Left", "score": -0.0101 }
+    { "personId": 10001, "pose": "Left", "score": -0.0101 }
   ]
 }
 ```
@@ -832,7 +843,7 @@ All optional. Add them after `?`, joined with `&`.
 | Parameter | Example value | Meaning |
 |---|---|---|
 | `decision` | `Accepted` | Only this result. Use `Accepted` for the real attendance register. Other values: `Rejected`, `Duplicate`, `NotEnrolled`, `NoFaceDetected`, `LowQuality`, `ProviderError` |
-| `personId` | `01a11f39-a5bc-73f2-88df-92b888fc150a` | Only one person |
+| `personId` | `10001` | Only one person |
 | `fromUtc` | `2026-10-09T00:00:00Z` | From this time (included). Use the `Z` (UTC) format |
 | `toUtc` | `2026-10-10T00:00:00Z` | Up to this time (not included) |
 | `page` | `1` | Page number. Default `1` |
@@ -863,8 +874,8 @@ add rows `decision` = `Accepted`, `fromUtc` = `2026-10-09T00:00:00Z`,
 {
   "items": [
     {
-      "id": "01a11f39-a9a2-73d8-9f00-5cfc81deb8a9",
-      "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+      "id": 10001,
+      "personId": 10001,
       "externalId": "EMP-1001",
       "fullName": "Alice Kumar",
       "direction": "In",

@@ -84,7 +84,7 @@ Content-Type: application/json
 
 ### Then post each pose to the same person id
 # @name captureFront
-POST {{host}}/api/v1/persons/00000000-0000-0000-0000-000000000000/faces
+POST {{host}}/api/v1/persons/10001/faces
 X-Api-Key: {{adminKey}}
 Content-Type: multipart/form-data; boundary=----Boundary
 
@@ -100,7 +100,7 @@ Content-Type: image/jpeg
 ------Boundary--
 
 ### Enrolment state: poses held, poses missing, how similar they are to each other
-GET {{host}}/api/v1/persons/00000000-0000-0000-0000-000000000000/enrollment
+GET {{host}}/api/v1/persons/10001/enrollment
 X-Api-Key: {{adminKey}}
 
 ### Look a person up by your own id
@@ -112,15 +112,15 @@ GET {{host}}/api/v1/persons?query=alice&enrollmentStatus=Enrolled&page=1&pageSiz
 X-Api-Key: {{adminKey}}
 
 ### Download a stored capture (admin only, never cached)
-GET {{host}}/api/v1/persons/00000000-0000-0000-0000-000000000000/faces/Front/image
+GET {{host}}/api/v1/persons/10001/faces/Front/image
 X-Api-Key: {{adminKey}}
 
 ### Retire one pose - the person stops being enrolled until it is recaptured
-DELETE {{host}}/api/v1/persons/00000000-0000-0000-0000-000000000000/faces/Left
+DELETE {{host}}/api/v1/persons/10001/faces/Left
 X-Api-Key: {{adminKey}}
 
 ### Erase every template and image for a person (data-erasure request)
-DELETE {{host}}/api/v1/persons/00000000-0000-0000-0000-000000000000/biometrics
+DELETE {{host}}/api/v1/persons/10001/biometrics
 X-Api-Key: {{adminKey}}
 
 ###############################################################################
@@ -182,7 +182,7 @@ GET {{host}}/api/v1/attendance?page=1&pageSize=50
 X-Api-Key: {{adminKey}}
 
 ### One person, one day
-GET {{host}}/api/v1/attendance?personId=00000000-0000-0000-0000-000000000000&fromUtc=2026-10-08T00:00:00Z&toUtc=2026-10-09T00:00:00Z
+GET {{host}}/api/v1/attendance?personId=10001&fromUtc=2026-10-08T00:00:00Z&toUtc=2026-10-09T00:00:00Z
 X-Api-Key: {{adminKey}}
 
 ### Only the failures - start here when somebody reports a problem

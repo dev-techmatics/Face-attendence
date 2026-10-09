@@ -139,7 +139,7 @@ curl -X POST http://localhost:5080/api/v1/registrations \
 
 ```json
 {
-  "person": { "id": "01a11af2-...", "externalId": "EMP-1001", "enrollmentStatus": "Enrolled" },
+  "person": { "id": 10001, "externalId": "EMP-1001", "enrollmentStatus": "Enrolled" },
   "captures": [ { "pose": "Front", "version": 1, "analysis": { "qualityScore": 0.82 } }, "..." ],
   "enrollmentCompleted": true
 }

@@ -39,10 +39,10 @@ public sealed class PersonsController(
         return CreatedAtAction(nameof(GetById), new { id = person.Id }, PersonResponse.From(person));
     }
 
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id:int}")]
     [ProducesResponseType<PersonResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<PersonResponse>> GetById(Guid id, CancellationToken ct)
+    public async Task<ActionResult<PersonResponse>> GetById(int id, CancellationToken ct)
     {
         Person person = await people.GetByIdAsync(id, includeTemplates: false, ct)
             ?? throw DomainException.NotFound("person_not_found", $"Person {id} was not found.");
@@ -91,20 +91,20 @@ public sealed class PersonsController(
     /// Current enrolment state: which poses exist, which are missing, and how similar the
     /// stored poses are to each other.
     /// </summary>
-    [HttpGet("{id:guid}/enrollment")]
+    [HttpGet("{id:int}/enrollment")]
     [ProducesResponseType<EnrollmentResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<EnrollmentResponse>> GetEnrollment(Guid id, CancellationToken ct) =>
+    public async Task<ActionResult<EnrollmentResponse>> GetEnrollment(int id, CancellationToken ct) =>
         EnrollmentResponse.From(await enrollment.GetEnrollmentAsync(tenant.TenantId, id, ct));
 
     /// <summary>
     /// Erase every face template and stored image for this person, including from the cloud
     /// provider when one is in use. This is the endpoint a data-erasure request needs.
     /// </summary>
-    [HttpDelete("{id:guid}/biometrics")]
+    [HttpDelete("{id:int}/biometrics")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> PurgeBiometrics(Guid id, CancellationToken ct)
+    public async Task<IActionResult> PurgeBiometrics(int id, CancellationToken ct)
     {
         await enrollment.PurgeBiometricsAsync(tenant.TenantId, id, ct);
         return NoContent();

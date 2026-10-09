@@ -79,14 +79,14 @@ public sealed class RegistrationController(
     /// Store one pose for an existing person. Safe to call again for the same pose: the new
     /// capture supersedes the old one instead of adding a duplicate.
     /// </summary>
-    [HttpPost("persons/{personId:guid}/faces")]
+    [HttpPost("persons/{personId:int}/faces")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(16 * 1024 * 1024)]
     [ProducesResponseType<CaptureFaceResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<CaptureFaceResponse>> CaptureFace(
-        Guid personId,
+        int personId,
         [FromForm] CaptureFaceRequest request,
         CancellationToken ct)
     {
@@ -99,12 +99,12 @@ public sealed class RegistrationController(
     }
 
     /// <summary>Store all three poses for a person who already exists.</summary>
-    [HttpPost("persons/{personId:guid}/faces/batch")]
+    [HttpPost("persons/{personId:int}/faces/batch")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(32 * 1024 * 1024)]
     [ProducesResponseType<IReadOnlyList<CaptureFaceResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<CaptureFaceResponse>>> CaptureAllPoses(
-        Guid personId,
+        int personId,
         [FromForm] CaptureAllPosesRequest request,
         CancellationToken ct)
     {
@@ -122,10 +122,10 @@ public sealed class RegistrationController(
     }
 
     /// <summary>Retire one pose. The person stops being enrolled until it is re-captured.</summary>
-    [HttpDelete("persons/{personId:guid}/faces/{pose}")]
+    [HttpDelete("persons/{personId:int}/faces/{pose}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeletePose(Guid personId, FacePose pose, CancellationToken ct)
+    public async Task<IActionResult> DeletePose(int personId, FacePose pose, CancellationToken ct)
     {
         await enrollment.DeletePoseAsync(tenant.TenantId, personId, pose, ct);
         return NoContent();
@@ -135,10 +135,10 @@ public sealed class RegistrationController(
     /// Download a stored registration image. Admin-only and deliberately not cacheable: this
     /// returns a photograph of a person face.
     /// </summary>
-    [HttpGet("persons/{personId:guid}/faces/{pose}/image")]
+    [HttpGet("persons/{personId:int}/faces/{pose}/image")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetPoseImage(Guid personId, FacePose pose, CancellationToken ct)
+    public async Task<IActionResult> GetPoseImage(int personId, FacePose pose, CancellationToken ct)
     {
         Person person = await people.GetByIdAsync(personId, false, ct)
             ?? throw DomainException.NotFound("person_not_found", $"Person {personId} was not found.");

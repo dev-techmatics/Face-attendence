@@ -57,6 +57,22 @@ values in that file (or set environment variables `ApiKeys__Admin__0` and `ApiKe
 and **restart the API**. On a production server the list starts empty, so every request is
 refused until real keys are configured there.
 
+**Adding your own key locally — two mistakes that silently fail (both return `401`):**
+
+| Wrong | Why it fails | Right |
+|---|---|---|
+| `"Admin": "my-key"` | Must be a list in square brackets. A plain string is ignored | `"Admin": [ "my-key" ]` |
+| Putting the key in `appsettings.json` | When running locally, `appsettings.Development.json` replaces the first key in that list with `dev-admin-key` | Put it in `appsettings.Development.json` |
+
+Working example — keeps the default key and adds yours, in `src/Api/appsettings.Development.json`:
+
+```json
+"ApiKeys": {
+  "Admin":  [ "dev-admin-key", "my-own-admin-key" ],
+  "Device": [ "dev-device-key" ]
+}
+```
+
 | If you send | You get |
 |---|---|
 | No `X-Api-Key` header, or a wrong value | `401 Unauthorized` (empty body) |

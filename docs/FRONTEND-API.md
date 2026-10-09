@@ -11,18 +11,100 @@ was run against a live local instance.
 
 | Header | Required | Value | Notes |
 |---|---|---|---|
-| `X-Api-Key` | **Yes** | `dev-admin-key` or `dev-device-key` | Which key depends on the endpoint — see each one below |
+| `X-Api-Key` | **Yes** | An admin or device key | See [API keys](#api-keys) below for where they come from |
 | `X-Tenant-Id` | No | e.g. `default` | Only for multi-site setups. Leave it out otherwise |
 | `Content-Type` | — | — | **Do not set it yourself** for file uploads. The browser / Postman adds `multipart/form-data` with the boundary automatically; setting it by hand breaks the upload |
 
-**Two keys, two jobs:**
+---
 
-| Key | Use it for |
-|---|---|
-| `dev-admin-key` | Registration screen, reports |
-| `dev-device-key` | Attendance kiosk / mobile app. It can **only** mark attendance |
+## API keys
 
-These are local development keys. Production keys will be different.
+### Where they come from
+
+**Nothing issues these keys.** There is no login, no key endpoint and no dashboard. A key is just a
+string *you* choose and write into the API's configuration. When a request arrives, the API
+compares its `X-Api-Key` header against that list. Match → allowed. No match → `401`.
+
+The list lives in the API's settings file, under `ApiKeys`:
+
+| Environment | File | What's in it |
+|---|---|---|
+| **Local development** | `src/Api/appsettings.Development.json` | `dev-admin-key` and `dev-device-key` — already set up, nothing to do |
+| **Production** | `src/Api/appsettings.json` | **Empty.** Every request returns `401` until you add keys |
+
+```json
+"ApiKeys": {
+  "Admin":  [ "dev-admin-key" ],
+  "Device": [ "dev-device-key" ]
+}
+```
+
+So **for local testing, use `dev-admin-key` and `dev-device-key` exactly as written** — they work
+out of the box.
+
+### The two kinds of key
+
+| Key type | Local value | Allowed to | Give it to |
+|---|---|---|---|
+| **Admin** | `dev-admin-key` | Everything: register people, view reports, delete face data | Your backend / admin panel |
+| **Device** | `dev-device-key` | **Only** `POST /attendance/mark` | Attendance kiosks and the mobile app |
+
+A device key used on an admin endpoint gets `403 Forbidden` (the key is valid, but not allowed
+there). An unknown key gets `401 Unauthorized`.
+
+Each list can hold several keys — for example one device key per kiosk, so you can block a
+single gate without touching the others.
+
+### Never put the admin key in a browser or mobile app
+
+Anything shipped to a browser or phone can be read by whoever holds it. If your registration screen
+is a web page, have it call **your own backend**, and let the backend add the admin key before
+forwarding to this API. The device key *can* live in a kiosk or mobile app — that is why it is
+limited to marking attendance.
+
+### Changing keys, or adding your own
+
+Pick one way. **Restart the API afterwards** — keys are read once at startup.
+
+**1. Edit the settings file** (local only — never commit real keys):
+
+```json
+"ApiKeys": {
+  "Admin":  [ "my-admin-key" ],
+  "Device": [ "gate-a-key", "gate-b-key", "mobile-app-key" ]
+}
+```
+
+**2. Environment variables** (use this on servers):
+
+```
+ApiKeys__Admin__0  = <admin key>
+ApiKeys__Device__0 = <first device key>
+ApiKeys__Device__1 = <second device key>
+```
+
+Double underscore, then the position in the list. **`__0` replaces the first key in the file;
+`__1` adds a second one.** So setting `ApiKeys__Admin__0` switches `dev-admin-key` off.
+
+**3. .NET user secrets** (local, keeps keys out of the repo):
+
+```
+dotnet user-secrets set "ApiKeys:Device:1" "<key>" --project src/Api
+dotnet user-secrets list --project src/Api
+```
+
+Only applies when running in Development.
+
+### Making a strong key
+
+Any long random string works. In PowerShell:
+
+```powershell
+$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); -join ($b | % { $_.ToString("x2") })
+```
+
+That prints a 64-character key such as `b8a6622476b2…`. Use a different one for every environment
+and every device.
 
 ---
 
@@ -32,7 +114,7 @@ These are local development keys. Production keys will be different.
 POST http://localhost:5080/api/v1/registrations
 ```
 
-**Header:** `X-Api-Key: dev-admin-key`
+**Header:** `X-Api-Key` = **admin key** (locally `dev-admin-key`)
 **Body:** `form-data`
 
 | Field | Type | Required | Rules |
@@ -80,7 +162,7 @@ same `externalId` can simply be retried.
 GET http://localhost:5080/api/v1/persons/{personId}/enrollment
 ```
 
-**Header:** `X-Api-Key: dev-admin-key`
+**Header:** `X-Api-Key` = **admin key** (locally `dev-admin-key`)
 **Body:** none
 
 **Success — `200 OK`**
@@ -116,7 +198,7 @@ GET http://localhost:5080/api/v1/persons/{personId}/enrollment
 POST http://localhost:5080/api/v1/attendance/mark
 ```
 
-**Header:** `X-Api-Key: dev-device-key`
+**Header:** `X-Api-Key` = **device key** (locally `dev-device-key`) — an admin key also works
 **Body:** `form-data`
 
 | Field | Type | Required | Notes |
@@ -174,7 +256,7 @@ Rate limit: 60 calls per minute per device. Beyond that you get `429 Too Many Re
 GET http://localhost:5080/api/v1/attendance
 ```
 
-**Header:** `X-Api-Key: dev-admin-key`
+**Header:** `X-Api-Key` = **admin key** (locally `dev-admin-key`)
 **Body:** none
 
 | Query parameter | Required | Example | Notes |

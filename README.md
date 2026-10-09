@@ -122,6 +122,22 @@ powershell -NoProfile -Command "Get-Process FaceAttendance.Api -ErrorAction Sile
 Starting the app with F5 rather than a detached `dotnet run` avoids this: stopping the debugger
 terminates the process.
 
+### If Postman keeps loading and never gets a response
+
+You started the app with the **debugger** and it has paused. The API reports expected problems
+(duplicate photo, unknown employee id, bad image) by throwing an exception that becomes a 4xx
+response. VS Code's debugger pauses on those by default, and while it is paused **the whole app is
+frozen** - every request hangs, even `/health`. VS Code shows the paused line highlighted.
+
+- **Right now:** press **F5 (Continue)** in VS Code and the request completes, or **Shift+F5** to stop.
+- **For testing:** start with the default **"Run API (for Postman / app testing)"** configuration
+  (F5 or Ctrl+F5). It runs without the debugger, so nothing pauses.
+- **Debugging but tired of the pauses:** Run and Debug > BREAKPOINTS > untick
+  **"User-Unhandled Exceptions"**.
+
+This is a debugger behaviour, not an API fault: the same request returns its 4xx immediately
+without the debugger, and in production.
+
 ## Registering a person
 
 The endpoint most capture screens want is a single multipart call that creates the person and

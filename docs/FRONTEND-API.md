@@ -32,6 +32,11 @@ http://localhost:5080
 Start the API first: press **F5** in VS Code, or run `dotnet run --project src/Api` from the
 project folder. Open `http://localhost:5080/health` in a browser — it should say `Healthy`.
 
+> **If Postman never gets a response:** the app was started with the debugger and has paused on
+> an error. In VS Code press **F5 (Continue)**, or **Shift+F5** to stop, then start it with the
+> default configuration **"Run API (for Postman / app testing)"**, which runs without the
+> debugger. Under the debugger, every rejected request (409, 404, 422...) freezes the whole app.
+
 ### API keys — what to put in the `X-Api-Key` header
 
 Every endpoint except `/health` needs a header named **`X-Api-Key`**. Locally, use these values

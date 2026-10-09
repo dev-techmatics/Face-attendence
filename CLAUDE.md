@@ -75,6 +75,12 @@ keeps the engine swappable.
   error.** It produces 4 errors and 20 warnings from one cause, because MSBuild retries each of
   the two DLLs ten times. Stop the process and rebuild.
 
+- **Under the VS Code debugger, every rejected request freezes the whole app.** Expected errors
+  are thrown as `FaceProcessingException` / `DomainException` and become 4xx in middleware; the C#
+  debugger pauses on these "user-unhandled" exceptions by default, suspending all threads, so
+  Postman hangs and even `/health` stops answering. The default launch config therefore uses
+  `"noDebug": true`. A user reporting "Postman spins forever" is almost always this.
+
 - **Primary keys are `int IDENTITY(10001, 1)`, assigned by SQL Server on insert.** Never set
   `Id` in code; read it after `SaveChangesAsync`. The seed lives in `AppDbContext.IdentitySeed`.
   Expect gaps (rolled-back registrations, SQL Server restarts). The one exception is the probe

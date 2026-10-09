@@ -2,10 +2,43 @@
   "version": "0.2.0",
   "configurations": [
     {
-      // F5. Builds first, then runs under the debugger. Stopping the debugger (Shift+F5)
-      // terminates the process, which is what keeps the next build from failing on a locked
-      // FaceAttendance.Core.dll.
-      "name": "Run API (Development)",
+      // DEFAULT (F5). Use this for Postman / app testing.
+      //
+      // Runs WITHOUT the debugger ("noDebug"). This matters: the API reports expected problems
+      // (duplicate photo, unknown employee id, bad image...) by throwing an exception that the
+      // error middleware turns into a 4xx response. Under the debugger, VS Code pauses on those
+      // exceptions by default, which freezes the whole app - every request, including /health,
+      // hangs until you press Continue. Postman just spins. Without the debugger they return
+      // instantly, as they do in production.
+      //
+      // Shift+F5 still stops it, which also keeps the next build from failing on a locked DLL.
+      "name": "Run API (for Postman / app testing)",
+      "type": "coreclr",
+      "request": "launch",
+      "noDebug": true,
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/Api/bin/Debug/net10.0/FaceAttendance.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/Api",
+      "console": "internalConsole",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5080"
+      },
+      // Opens the interactive API reference once Kestrel reports it is listening.
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+        "uriFormat": "%s/scalar/v1"
+      }
+    },
+    {
+      // Only when you want breakpoints and stepping.
+      //
+      // Expect it to PAUSE whenever a request is rejected (409, 404, 422...). The app is frozen
+      // while paused: press Continue (F5) and the request completes. To stop pausing on those,
+      // open Run and Debug > BREAKPOINTS and untick "User-Unhandled Exceptions".
+      "name": "Debug API (breakpoints - pauses on errors)",
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build",
@@ -17,12 +50,6 @@
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_URLS": "http://localhost:5080"
-      },
-      // Opens the interactive API reference once Kestrel reports it is listening.
-      "serverReadyAction": {
-        "action": "openExternally",
-        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
-        "uriFormat": "%s/scalar/v1"
       }
     },
     {

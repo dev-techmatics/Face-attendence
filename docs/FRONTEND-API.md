@@ -1,36 +1,49 @@
-# Face Attendance API — Frontend Guide
+# Face Attendance API — Endpoint Reference for App Developers
 
-The four endpoints a frontend app needs, with exact URLs, headers and fields. Every example below
-was run against a live local instance.
+This document lists **every endpoint the app uses**. Each endpoint is described in the same
+format: method, URL, headers (with the exact value to enter), path / query / body parameters,
+a full request example, and the real response.
 
-**Base URL (local):** `http://localhost:5080`
-
----
-
-## Headers
-
-| Header | Required | Value | Notes |
-|---|---|---|---|
-| `X-Api-Key` | **Yes** | An admin or device key | See [API keys](#api-keys) below for where they come from |
-| `X-Tenant-Id` | No | e.g. `default` | Only for multi-site setups. Leave it out otherwise |
-| `Content-Type` | — | — | **Do not set it yourself** for file uploads. The browser / Postman adds `multipart/form-data` with the boundary automatically; setting it by hand breaks the upload |
+Every request and response below was run against a live local instance.
 
 ---
 
-## API keys
+## Quick reference
 
-### Where they come from
+| # | What it does | Method | URL | API key |
+|---|---|---|---|---|
+| 0 | Check the server is up | `GET` | `http://localhost:5080/health` | none |
+| 1 | Register a person with 3 photos | `POST` | `http://localhost:5080/api/v1/registrations` | admin |
+| 2 | Find a person by employee ID | `GET` | `http://localhost:5080/api/v1/persons/by-external-id/{externalId}` | admin |
+| 3 | Check registration status | `GET` | `http://localhost:5080/api/v1/persons/{personId}/enrollment` | admin |
+| 4 | Mark attendance | `POST` | `http://localhost:5080/api/v1/attendance/mark` | device |
+| 5 | Attendance list / report | `GET` | `http://localhost:5080/api/v1/attendance` | admin |
 
-**Nothing issues these keys.** There is no login, no key endpoint and no dashboard. A key is just a
-string *you* choose and write into the API's configuration. When a request arrives, the API
-compares its `X-Api-Key` header against that list. Match → allowed. No match → `401`.
+---
 
-The list lives in the API's settings file, under `ApiKeys`:
+## Before you start
 
-| Environment | File | What's in it |
+### Base URL
+
+```
+http://localhost:5080
+```
+
+Start the API first: press **F5** in VS Code, or run `dotnet run --project src/Api` from the
+project folder. Open `http://localhost:5080/health` in a browser — it should say `Healthy`.
+
+### API keys — what to put in the `X-Api-Key` header
+
+Every endpoint except `/health` needs a header named **`X-Api-Key`**. Locally, use these values
+exactly:
+
+| Key type | Value to enter locally | Use it for |
 |---|---|---|
-| **Local development** | `src/Api/appsettings.Development.json` | `dev-admin-key` and `dev-device-key` — already set up, nothing to do |
-| **Production** | `src/Api/appsettings.json` | **Empty.** Every request returns `401` until you add keys |
+| **Admin key** | `dev-admin-key` | Endpoints 1, 2, 3, 5 (registration screen, reports) |
+| **Device key** | `dev-device-key` | Endpoint 4 only (attendance kiosk / mobile app) |
+
+**Where these come from:** nothing generates or issues them. They are plain text values written
+in the API's settings file `src/Api/appsettings.Development.json`:
 
 ```json
 "ApiKeys": {
@@ -39,254 +52,829 @@ The list lives in the API's settings file, under `ApiKeys`:
 }
 ```
 
-So **for local testing, use `dev-admin-key` and `dev-device-key` exactly as written** — they work
-out of the box.
+The API compares your `X-Api-Key` header against this list. To use your own keys, change the
+values in that file (or set environment variables `ApiKeys__Admin__0` and `ApiKeys__Device__0`)
+and **restart the API**. On a production server the list starts empty, so every request is
+refused until real keys are configured there.
 
-### The two kinds of key
+| If you send | You get |
+|---|---|
+| No `X-Api-Key` header, or a wrong value | `401 Unauthorized` (empty body) |
+| A device key on an admin endpoint | `403 Forbidden` (empty body) |
+| An admin key on endpoint 4 | Allowed — the admin key works everywhere |
 
-| Key type | Local value | Allowed to | Give it to |
+> **Security:** never put the admin key inside a browser page or a mobile app — anyone can read
+> it there. A web registration screen should call your own backend, which adds the admin key.
+> The device key can live in a kiosk or mobile app because it can only mark attendance.
+
+### IDs — which are created automatically and which you send
+
+**All database IDs are generated automatically by the API.** You never send an ID when creating
+something. If a request includes an `id` field anyway, it is ignored — this was tested: sending
+`"id": "11111111-1111-1111-1111-111111111111"` produced a new API-generated ID instead, and that
+new ID is what SQL Server stored.
+
+| Field | What it is | Who creates it | Do you send it? |
 |---|---|---|---|
-| **Admin** | `dev-admin-key` | Everything: register people, view reports, delete face data | Your backend / admin panel |
-| **Device** | `dev-device-key` | **Only** `POST /attendance/mark` | Attendance kiosks and the mobile app |
+| `person.id` (also called `personId`) | The person's database ID (GUID) | **API, automatically** when you call endpoint 1 | Never when creating. You send it **back** later in the URL of endpoint 3, to say *which* person |
+| `templateId` | ID of each stored photo | **API, automatically** | Never |
+| `eventId` | ID of each attendance attempt | **API, automatically** when you call endpoint 4 | Never |
+| `externalId` | **Your own** employee / student code (e.g. `EMP-1001`) | **You** | **Yes**, on endpoint 1. It is not a database key — it is your code from your own HR system, so both systems can refer to the same person. It must be unique |
 
-A device key used on an admin endpoint gets `403 Forbidden` (the key is valid, but not allowed
-there). An unknown key gets `401 Unauthorized`.
+IDs look like `01a11f39-a5bc-73f2-88df-92b888fc150a` (GUID v7, time-ordered).
 
-Each list can hold several keys — for example one device key per kiosk, so you can block a
-single gate without touching the others.
+### Two rules that apply to every endpoint
 
-### Never put the admin key in a browser or mobile app
-
-Anything shipped to a browser or phone can be read by whoever holds it. If your registration screen
-is a web page, have it call **your own backend**, and let the backend add the admin key before
-forwarding to this API. The device key *can* live in a kiosk or mobile app — that is why it is
-limited to marking attendance.
-
-### Changing keys, or adding your own
-
-Pick one way. **Restart the API afterwards** — keys are read once at startup.
-
-**1. Edit the settings file** (local only — never commit real keys):
-
-```json
-"ApiKeys": {
-  "Admin":  [ "my-admin-key" ],
-  "Device": [ "gate-a-key", "gate-b-key", "mobile-app-key" ]
-}
-```
-
-**2. Environment variables** (use this on servers):
-
-```
-ApiKeys__Admin__0  = <admin key>
-ApiKeys__Device__0 = <first device key>
-ApiKeys__Device__1 = <second device key>
-```
-
-Double underscore, then the position in the list. **`__0` replaces the first key in the file;
-`__1` adds a second one.** So setting `ApiKeys__Admin__0` switches `dev-admin-key` off.
-
-**3. .NET user secrets** (local, keeps keys out of the repo):
-
-```
-dotnet user-secrets set "ApiKeys:Device:1" "<key>" --project src/Api
-dotnet user-secrets list --project src/Api
-```
-
-Only applies when running in Development.
-
-### Making a strong key
-
-Any long random string works. In PowerShell:
-
-```powershell
-$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); -join ($b | % { $_.ToString("x2") })
-```
-
-That prints a 64-character key such as `b8a6622476b2…`. Use a different one for every environment
-and every device.
+1. **Never add a `Content-Type` header yourself** on endpoints that upload photos (1 and 4).
+   Postman, browsers and `fetch` add `multipart/form-data` with the correct boundary
+   automatically. Adding it by hand breaks the upload.
+2. **Only `X-Api-Key` is needed.** No other header is required. (`X-Tenant-Id` exists only for
+   multi-site deployments — leave it out.)
 
 ---
 
-## 1. Register a person (all 3 photos in one call)
+## 0. Check the server is up
+
+**What it does:** confirms the API and database are running. **Used by:** app start-up check.
+
+| Item | Value |
+|---|---|
+| Method | `GET` |
+| URL | `http://localhost:5080/health` |
+| Body | none |
+
+### Headers
+
+None. This is the only endpoint that needs no API key.
+
+### Parameters
+
+None.
+
+### Example request
+
+```bash
+curl http://localhost:5080/health
+```
+
+### Response — `200 OK`
+
+Plain text, not JSON:
 
 ```
-POST http://localhost:5080/api/v1/registrations
+Healthy
 ```
 
-**Header:** `X-Api-Key` = **admin key** (locally `dev-admin-key`)
-**Body:** `form-data`
+If the database is down it returns `503` with the text `Unhealthy`.
 
-| Field | Type | Required | Rules |
-|---|---|---|---|
-| `externalId` | text | **Yes** | Your employee / student id. Max 64 chars. Must be unique |
-| `fullName` | text | **Yes** | Max 200 chars |
-| `email` | text | No | Valid email |
-| `department` | text | No | Max 128 chars |
-| `front` | **file** | **Yes** | Face looking straight at the camera |
-| `left` | **file** | **Yes** | Head turned to the person's left |
-| `right` | **file** | **Yes** | Head turned to the person's right |
+---
 
-**Image rules:** JPEG, PNG or WebP · max 8 MB each · at least 240 × 240 px · exactly one face in frame.
+## 1. Register a person with 3 photos
 
-**Success — `201 Created`**
+**What it does:** creates the person and stores their front, left and right face photos in one
+call. **Used by:** the registration screen.
+
+| Item | Value |
+|---|---|
+| Method | `POST` |
+| URL | `http://localhost:5080/api/v1/registrations` |
+| Body format | `form-data` (multipart) |
+
+### Headers
+
+| Header name | Value to enter | Required |
+|---|---|---|
+| `X-Api-Key` | `dev-admin-key` | **Yes** |
+
+Do **not** add `Content-Type`.
+
+### Path parameters
+
+None.
+
+### Query parameters
+
+None.
+
+### Body — `form-data`
+
+| Key (exact spelling) | Type | Required | Example value | Rules |
+|---|---|---|---|---|
+| `externalId` | Text | **Yes** | `EMP-1001` | Your employee code. Max 64 characters. Must not already be registered |
+| `fullName` | Text | **Yes** | `Alice Kumar` | Max 200 characters |
+| `email` | Text | No | `alice.kumar@company.com` | Must be a valid email if sent |
+| `department` | Text | No | `Operations` | Max 128 characters |
+| `front` | **File** | **Yes** | `alice-front.jpg` | Person looking straight at the camera |
+| `left` | **File** | **Yes** | `alice-left.jpg` | Head turned to the **person's own** left |
+| `right` | **File** | **Yes** | `alice-right.jpg` | Head turned to the **person's own** right |
+
+**Photo rules (each file):** JPEG, PNG or WebP · max 8 MB · at least 240 × 240 pixels ·
+exactly one face in the photo · the three photos must be different pictures.
+
+**Do not send** `id` or `personId` — the API creates the ID.
+
+### Example request — curl
+
+Run from the `docs/samples` folder:
+
+```bash
+curl -X POST http://localhost:5080/api/v1/registrations \
+  -H "X-Api-Key: dev-admin-key" \
+  -F "externalId=EMP-1001" \
+  -F "fullName=Alice Kumar" \
+  -F "email=alice.kumar@company.com" \
+  -F "department=Operations" \
+  -F "front=@alice-front.jpg" \
+  -F "left=@alice-left.jpg" \
+  -F "right=@alice-right.jpg"
+```
+
+### Example request — Postman
+
+1. Method **POST**, URL `http://localhost:5080/api/v1/registrations`
+2. **Headers** tab → add one row: Key `X-Api-Key`, Value `dev-admin-key`
+3. **Body** tab → choose **form-data** → add these rows:
+
+| Key | Type (dropdown on the key cell) | Value |
+|---|---|---|
+| `externalId` | Text | `EMP-1001` |
+| `fullName` | Text | `Alice Kumar` |
+| `email` | Text | `alice.kumar@company.com` |
+| `department` | Text | `Operations` |
+| `front` | **File** | select `alice-front.jpg` |
+| `left` | **File** | select `alice-left.jpg` |
+| `right` | **File** | select `alice-right.jpg` |
+
+### Success response — `201 Created`
+
+The fields the app needs:
+
+| Field | Example | Meaning |
+|---|---|---|
+| `person.id` | `01a11f39-a5bc-73f2-88df-92b888fc150a` | **Save this.** The ID the API created for this person |
+| `person.externalId` | `EMP-1001` | The code you sent |
+| `enrollmentStatus` | `Enrolled` | `Enrolled` = ready to mark attendance |
+| `enrollmentCompleted` | `true` | `true` = all 3 photos accepted |
 
 ```json
 {
   "person": {
-    "id": "01a11f0f-3a1a-7563-9db6-9643dd9f947d",
+    "id": "01a11f39-a5bc-73f2-88df-92b888fc150a",
     "externalId": "EMP-1001",
     "fullName": "Alice Kumar",
+    "email": "alice.kumar@company.com",
     "department": "Operations",
     "status": "Active",
     "enrollmentStatus": "Enrolled",
-    "enrolledAtUtc": "2026-10-09T05:07:35.040828+00:00",
-    "createdAtUtc": "2026-10-09T05:07:34.0425547+00:00"
+    "enrolledAtUtc": "2026-10-09T05:53:54.5368845+00:00",
+    "createdAtUtc": "2026-10-09T05:53:54.1089243+00:00"
   },
-  "captures": [ "...one entry per photo..." ],
+  "captures": [ "...one object per photo, see full response below..." ],
   "enrollmentStatus": "Enrolled",
   "enrollmentCompleted": true
 }
 ```
 
-**Save `person.id`** — the status endpoint below needs it.
-
-All-or-nothing: if any of the three photos is rejected, the person is **not** created, so the
-same `externalId` can simply be retried.
-
----
-
-## 2. Check registration status
-
-```
-GET http://localhost:5080/api/v1/persons/{personId}/enrollment
-```
-
-**Header:** `X-Api-Key` = **admin key** (locally `dev-admin-key`)
-**Body:** none
-
-**Success — `200 OK`**
+<details>
+<summary>Full response, exactly as returned (click to expand)</summary>
 
 ```json
 {
-  "personId": "01a11f0f-3a1a-7563-9db6-9643dd9f947d",
+  "person": {
+    "id": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+    "externalId": "EMP-1001",
+    "fullName": "Alice Kumar",
+    "email": "alice.kumar@company.com",
+    "department": "Operations",
+    "status": "Active",
+    "enrollmentStatus": "Enrolled",
+    "enrolledAtUtc": "2026-10-09T05:53:54.5368845+00:00",
+    "createdAtUtc": "2026-10-09T05:53:54.1089243+00:00"
+  },
+  "captures": [
+    {
+      "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+      "pose": "Front",
+      "templateId": "01a11f39-a6db-7062-9b18-a894c2763d00",
+      "version": 1,
+      "replacedPrevious": false,
+      "enrollmentStatus": "InProgress",
+      "capturedPoses": [ "Front" ],
+      "missingPoses": [ "Left", "Right" ],
+      "enrollmentCompleted": false,
+      "analysis": {
+        "faceDetected": true,
+        "faceCount": 1,
+        "detectionScore": 0.99,
+        "qualityScore": 0.9,
+        "sharpness": 0.9,
+        "brightness": 0.5,
+        "imageWidth": 640,
+        "imageHeight": 640,
+        "yawDegrees": 0,
+        "pitchDegrees": 0,
+        "rollDegrees": 0,
+        "inferredPose": "Front",
+        "box": { "x": 100, "y": 100, "width": 200, "height": 200 },
+        "warnings": [ "Development provider: no real face analysis was performed." ]
+      },
+      "warnings": [ "Development provider: no real face analysis was performed." ]
+    },
+    {
+      "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+      "pose": "Left",
+      "templateId": "01a11f39-a751-738a-96ac-1fd32340aee1",
+      "version": 1,
+      "replacedPrevious": false,
+      "enrollmentStatus": "InProgress",
+      "capturedPoses": [ "Front", "Left" ],
+      "missingPoses": [ "Right" ],
+      "enrollmentCompleted": false,
+      "analysis": {
+        "faceDetected": true,
+        "faceCount": 1,
+        "detectionScore": 0.99,
+        "qualityScore": 0.9,
+        "sharpness": 0.9,
+        "brightness": 0.5,
+        "imageWidth": 640,
+        "imageHeight": 640,
+        "yawDegrees": 22,
+        "pitchDegrees": 0,
+        "rollDegrees": 0,
+        "inferredPose": "Left",
+        "box": { "x": 100, "y": 100, "width": 200, "height": 200 },
+        "warnings": [ "Development provider: no real face analysis was performed." ]
+      },
+      "warnings": [ "Development provider: no real face analysis was performed." ]
+    },
+    {
+      "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+      "pose": "Right",
+      "templateId": "01a11f39-a75c-751e-896d-a33d6390ad93",
+      "version": 1,
+      "replacedPrevious": false,
+      "enrollmentStatus": "Enrolled",
+      "capturedPoses": [ "Front", "Left", "Right" ],
+      "missingPoses": [],
+      "enrollmentCompleted": true,
+      "analysis": {
+        "faceDetected": true,
+        "faceCount": 1,
+        "detectionScore": 0.99,
+        "qualityScore": 0.9,
+        "sharpness": 0.9,
+        "brightness": 0.5,
+        "imageWidth": 640,
+        "imageHeight": 640,
+        "yawDegrees": -22,
+        "pitchDegrees": 0,
+        "rollDegrees": 0,
+        "inferredPose": "Right",
+        "box": { "x": 100, "y": 100, "width": 200, "height": 200 },
+        "warnings": [ "Development provider: no real face analysis was performed." ]
+      },
+      "warnings": [ "Development provider: no real face analysis was performed." ]
+    }
+  ],
+  "enrollmentStatus": "Enrolled",
+  "enrollmentCompleted": true
+}
+```
+
+The `warnings` saying "Development provider" appear only in local test mode.
+
+</details>
+
+**All or nothing:** if any of the three photos is rejected, the person is **not** saved, so you
+can fix the photo and send the same request again with the same `externalId`.
+
+### Error responses
+
+| Status | `code` | When |
+|---|---|---|
+| `400` | — | A required field is missing (see `errors`) |
+| `401` | — | `X-Api-Key` missing or wrong |
+| `403` | — | Device key used instead of admin key |
+| `409` | `external_id_exists` | This `externalId` is already registered |
+| `409` | `duplicate_identity` | This **face** is already registered under a different `externalId` |
+| `409` | `duplicate_frame` | The same picture was sent for two of the three photos |
+| `413` | `image_too_large` | A photo is over 8 MB |
+| `415` | `unsupported_format` | A file is not a real JPEG / PNG / WebP |
+| `422` | `no_face_detected` | No face found in a photo |
+| `422` | `multiple_faces_detected` | More than one person in a photo |
+| `422` | `low_quality` | Photo blurry, too dark, or face too small — read `hints` |
+| `422` | `pose_mismatch` | Head not turned the way that photo requires |
+
+Missing field — `400`:
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "One or more validation errors occurred.",
+  "status": 400,
+  "errors": {
+    "Left": [ "The Left field is required." ],
+    "Right": [ "The Right field is required." ]
+  },
+  "traceId": "00-78a063054f04234dfac9920de2435ab2-11ca7208035eb8c7-00"
+}
+```
+
+Employee code already registered — `409`:
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+  "title": "The request could not be completed",
+  "status": 409,
+  "detail": "A person with ExternalId EMP-1001 already exists in this tenant.",
+  "code": "external_id_exists",
+  "hints": [],
+  "traceId": "00-339d69d8e3baadf79e150710344e3b50-3218ab42e49a68d0-00"
+}
+```
+
+Same face already registered under another code — `409`:
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+  "title": "The image could not be used",
+  "status": 409,
+  "detail": "This face already matches an existing registration (similarity 1.00).",
+  "code": "duplicate_identity",
+  "hints": [
+    "If this person is genuinely new, an operator should review the existing record.",
+    "Conflicting person id: 01a11f39-a5bc-73f2-88df-92b888fc150a"
+  ],
+  "traceId": "00-a56af66bfb2777b24d8da9044ae53c5f-a0b6592fb10b43c9-00"
+}
+```
+
+---
+
+## 2. Find a person by employee ID
+
+**What it does:** returns a person using **your** employee code — useful because the app usually
+knows `EMP-1001`, not the GUID. **Used by:** registration screen, admin screens.
+
+| Item | Value |
+|---|---|
+| Method | `GET` |
+| URL | `http://localhost:5080/api/v1/persons/by-external-id/{externalId}` |
+| Body | none |
+
+### Headers
+
+| Header name | Value to enter | Required |
+|---|---|---|
+| `X-Api-Key` | `dev-admin-key` | **Yes** |
+
+### Path parameters
+
+| Parameter | Required | Example value | Meaning |
+|---|---|---|---|
+| `externalId` | **Yes** | `EMP-1001` | Your employee code, exactly as sent at registration |
+
+### Query parameters
+
+None.
+
+### Body
+
+None.
+
+### Example request
+
+```bash
+curl http://localhost:5080/api/v1/persons/by-external-id/EMP-1001 \
+  -H "X-Api-Key: dev-admin-key"
+```
+
+**Postman:** Method **GET** · URL
+`http://localhost:5080/api/v1/persons/by-external-id/EMP-1001` · **Headers** tab: `X-Api-Key` =
+`dev-admin-key` · no body.
+
+### Success response — `200 OK`
+
+```json
+{
+  "id": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+  "externalId": "EMP-1001",
+  "fullName": "Alice Kumar",
+  "email": "alice.kumar@company.com",
+  "department": "Operations",
+  "status": "Active",
+  "enrollmentStatus": "Enrolled",
+  "enrolledAtUtc": "2026-10-09T05:53:54.5368845+00:00",
+  "createdAtUtc": "2026-10-09T05:53:54.1089243+00:00"
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `id` | The `personId` (needed for endpoint 3) |
+| `status` | `Active`, `Suspended` or `Archived` |
+| `enrollmentStatus` | `Enrolled` = ready for attendance. See endpoint 3 for all values |
+
+### Error responses
+
+| Status | `code` | When |
+|---|---|---|
+| `401` | — | `X-Api-Key` missing or wrong |
+| `403` | — | Device key used |
+| `404` | `person_not_found` | No person with that code |
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.5",
+  "title": "The request could not be completed",
+  "status": 404,
+  "detail": "No person with ExternalId EMP-9999 in this tenant.",
+  "code": "person_not_found",
+  "hints": [],
+  "traceId": "00-bcc67b48dc4312603a2714ade7b14876-2bfbaeddf55362de-00"
+}
+```
+
+---
+
+## 3. Check registration status
+
+**What it does:** shows which of the 3 photos are stored and whether the person can mark
+attendance. **Used by:** registration screen (after registering, or to resume a half-done one).
+
+| Item | Value |
+|---|---|
+| Method | `GET` |
+| URL | `http://localhost:5080/api/v1/persons/{personId}/enrollment` |
+| Body | none |
+
+### Headers
+
+| Header name | Value to enter | Required |
+|---|---|---|
+| `X-Api-Key` | `dev-admin-key` | **Yes** |
+
+### Path parameters
+
+| Parameter | Required | Example value | Where to get it |
+|---|---|---|---|
+| `personId` | **Yes** | `01a11f39-a5bc-73f2-88df-92b888fc150a` | `person.id` from endpoint 1, or `id` from endpoint 2. Must be a full GUID — `EMP-1001` will not work here |
+
+### Query parameters
+
+None.
+
+### Body
+
+None.
+
+### Example request
+
+```bash
+curl http://localhost:5080/api/v1/persons/01a11f39-a5bc-73f2-88df-92b888fc150a/enrollment \
+  -H "X-Api-Key: dev-admin-key"
+```
+
+**Postman:** Method **GET** · URL
+`http://localhost:5080/api/v1/persons/01a11f39-a5bc-73f2-88df-92b888fc150a/enrollment`
+(replace the GUID with yours) · **Headers** tab: `X-Api-Key` = `dev-admin-key` · no body.
+
+### Success response — `200 OK`
+
+```json
+{
+  "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
   "externalId": "EMP-1001",
   "fullName": "Alice Kumar",
   "status": "Active",
   "enrollmentStatus": "Enrolled",
+  "enrolledAtUtc": "2026-10-09T05:53:54.5368845+00:00",
   "poses": [
-    { "pose": "Front", "version": 1, "qualityScore": 0.9 },
-    { "pose": "Left",  "version": 1, "qualityScore": 0.9 },
-    { "pose": "Right", "version": 1, "qualityScore": 0.9 }
+    {
+      "pose": "Front",
+      "templateId": "01a11f39-a6db-7062-9b18-a894c2763d00",
+      "version": 1,
+      "qualityScore": 0.9,
+      "detectionScore": 0.99,
+      "providerId": "development:filename-stub:v1",
+      "providerMatchesCurrent": true,
+      "capturedAtUtc": "2026-10-09T05:53:54.3965763+00:00"
+    },
+    {
+      "pose": "Left",
+      "templateId": "01a11f39-a751-738a-96ac-1fd32340aee1",
+      "version": 1,
+      "qualityScore": 0.9,
+      "detectionScore": 0.99,
+      "providerId": "development:filename-stub:v1",
+      "providerMatchesCurrent": true,
+      "capturedAtUtc": "2026-10-09T05:53:54.5137154+00:00"
+    },
+    {
+      "pose": "Right",
+      "templateId": "01a11f39-a75c-751e-896d-a33d6390ad93",
+      "version": 1,
+      "qualityScore": 0.9,
+      "detectionScore": 0.99,
+      "providerId": "development:filename-stub:v1",
+      "providerMatchesCurrent": true,
+      "capturedAtUtc": "2026-10-09T05:53:54.5247612+00:00"
+    }
   ],
-  "missingPoses": []
+  "missingPoses": [],
+  "poseSimilarities": [
+    { "a": "Front", "b": "Left", "similarity": 0.9858 },
+    { "a": "Front", "b": "Right", "similarity": 0.985 },
+    { "a": "Left", "b": "Right", "similarity": 0.9862 }
+  ],
+  "warnings": []
 }
 ```
 
-| `enrollmentStatus` | Meaning |
-|---|---|
-| `Enrolled` | Ready to mark attendance |
-| `InProgress` | Some photos missing — see `missingPoses` |
-| `NotEnrolled` | No photos yet |
-| `Stale` | Face engine changed — the person must register again |
+| `enrollmentStatus` | Meaning | What the app should do |
+|---|---|---|
+| `Enrolled` | All 3 photos stored and checked | Person can mark attendance |
+| `InProgress` | Some photos missing | Ask for the poses listed in `missingPoses` |
+| `NotEnrolled` | No photos yet | Start registration |
+| `Stale` | The face engine was changed since these photos were taken | Register the person again |
+
+### Error responses
+
+| Status | `code` | When |
+|---|---|---|
+| `401` | — | `X-Api-Key` missing or wrong |
+| `403` | — | Device key used |
+| `404` | `person_not_found` | No person with that ID |
+| `404` | — (empty body) | `personId` is not a valid GUID |
 
 ---
 
-## 3. Mark attendance
+## 4. Mark attendance
 
+**What it does:** checks the live photo against the registered photos and records the punch.
+**Used by:** the attendance kiosk / mobile app.
+
+| Item | Value |
+|---|---|
+| Method | `POST` |
+| URL | `http://localhost:5080/api/v1/attendance/mark` |
+| Body format | `form-data` (multipart) |
+
+### Headers
+
+| Header name | Value to enter | Required |
+|---|---|---|
+| `X-Api-Key` | `dev-device-key` | **Yes** (`dev-admin-key` also works) |
+
+Do **not** add `Content-Type`.
+
+### Path parameters
+
+None.
+
+### Query parameters
+
+None.
+
+### Body — `form-data`
+
+| Key (exact spelling) | Type | Required | Example value | Rules |
+|---|---|---|---|---|
+| `image` | **File** | **Yes** | `alice-front.jpg` | The live camera photo. Same photo rules as registration |
+| `externalId` | Text | **Recommended** | `EMP-1001` | Who is claiming to be here (from a badge, PIN or name picker). Makes the check much more accurate |
+| `personId` | Text | No | `01a11f39-a5bc-73f2-88df-92b888fc150a` | Alternative to `externalId`. If both are sent, `personId` is used |
+| `deviceId` | Text | No | `GATE-A` | Which kiosk sent it. Shows up in reports. Max 128 characters |
+| `latitude` | Number | No | `19.0760` | −90 to 90 |
+| `longitude` | Number | No | `72.8777` | −180 to 180 |
+| `capturedAtUtc` | Text | No | `2026-10-09T05:53:55Z` | When the device took the photo (ISO 8601). Stored for reference only |
+| `direction` | Text | No | `In` | `In` or `Out`. **Normally leave it out** — the server decides In/Out from the person's previous punch, and ignores this field once the person has punched before |
+
+**With `externalId` (recommended):** the photo is compared only with that person — fast and
+accurate.
+**Without `externalId` or `personId`:** the photo is compared with **everyone** registered. It
+works, but becomes less reliable as the number of people grows.
+
+**Do not send** `id` or `eventId` — the API creates them.
+
+### Example request — curl
+
+```bash
+curl -X POST http://localhost:5080/api/v1/attendance/mark \
+  -H "X-Api-Key: dev-device-key" \
+  -F "externalId=EMP-1001" \
+  -F "deviceId=GATE-A" \
+  -F "image=@alice-front.jpg"
 ```
-POST http://localhost:5080/api/v1/attendance/mark
-```
 
-**Header:** `X-Api-Key` = **device key** (locally `dev-device-key`) — an admin key also works
-**Body:** `form-data`
+### Example request — Postman
 
-| Field | Type | Required | Notes |
-|---|---|---|---|
-| `image` | **file** | **Yes** | Live photo from the camera |
-| `externalId` | text | Recommended | Who is claiming to be there (badge / PIN / name picker). **Much more accurate** than leaving it out |
-| `personId` | text | No | Alternative to `externalId` (the GUID) |
-| `deviceId` | text | No | e.g. `GATE-A`. Shows up in reports |
-| `direction` | text | No | `In` or `Out`. Leave empty and the server decides from the last punch |
-| `latitude` / `longitude` | number | No | Device location |
+1. Method **POST**, URL `http://localhost:5080/api/v1/attendance/mark`
+2. **Headers** tab → Key `X-Api-Key`, Value `dev-device-key`
+3. **Body** tab → **form-data** →
 
-If neither `externalId` nor `personId` is sent, the server searches **all** registered people for
-the face. That works, but is less accurate as the number of people grows.
+| Key | Type | Value |
+|---|---|---|
+| `externalId` | Text | `EMP-1001` |
+| `deviceId` | Text | `GATE-A` |
+| `image` | **File** | select `alice-front.jpg` |
 
-**Response — always `200 OK`.** Even a face that does not match returns 200.
-**Check `success` and `decision`, not the HTTP status.**
+### Response — always `200 OK` when the request was valid
+
+**Important:** even when the face does **not** match, the status is `200`. Always read
+`success` and `decision` in the body.
+
+Accepted:
 
 ```json
 {
   "success": true,
   "decision": "Accepted",
-  "eventId": "01a11f0f-5d8d-7f6a-96ec-a0b86e916537",
-  "personId": "01a11f0f-3a1a-7563-9db6-9643dd9f947d",
+  "eventId": "01a11f39-a9a2-73d8-9f00-5cfc81deb8a9",
+  "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
   "externalId": "EMP-1001",
   "fullName": "Alice Kumar",
   "direction": "In",
   "score": 1,
   "threshold": 0.42,
-  "matchedPose": "Front",
-  "recordedAtUtc": "2026-10-09T05:07:43.1177823+00:00",
-  "processingMs": 171
+  "matchedPose": "Left",
+  "recordedAtUtc": "2026-10-09T05:53:55.1068887+00:00",
+  "processingMs": 86,
+  "topScores": [
+    { "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a", "pose": "Left", "score": 1 }
+  ]
 }
 ```
 
-| `decision` | `success` | What to show the user |
+Same person again within 2 minutes:
+
+```json
+{
+  "success": false,
+  "decision": "Duplicate",
+  "eventId": "01a11f39-aa9b-71fa-8eee-f49c94bf58f6",
+  "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+  "externalId": "EMP-1001",
+  "fullName": "Alice Kumar",
+  "score": 1,
+  "threshold": 0.42,
+  "matchedPose": "Left",
+  "recordedAtUtc": "2026-10-09T05:53:55.3553255+00:00",
+  "message": "Already marked In at 2026-10-09T05:53:55.1068887+00:00, inside the 2-minute window.",
+  "processingMs": 8,
+  "topScores": [
+    { "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a", "pose": "Left", "score": 1 }
+  ]
+}
+```
+
+Face does not match the claimed person:
+
+```json
+{
+  "success": false,
+  "decision": "Rejected",
+  "eventId": "01a11f39-ab39-7ae1-b8e3-f1a677d89315",
+  "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
+  "externalId": "EMP-1001",
+  "fullName": "Alice Kumar",
+  "score": -0.0101,
+  "threshold": 0.42,
+  "recordedAtUtc": "2026-10-09T05:53:55.5133388+00:00",
+  "message": "Best score -0.010 did not reach the 0.420 threshold.",
+  "processingMs": 3,
+  "topScores": [
+    { "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a", "pose": "Left", "score": -0.0101 }
+  ]
+}
+```
+
+### Response fields
+
+| Field | Meaning |
+|---|---|
+| `success` | `true` only when attendance was recorded as `Accepted` |
+| `decision` | The result — see table below |
+| `eventId` | ID of this attempt, created by the API. Every attempt is saved, even failed ones |
+| `personId`, `externalId`, `fullName` | The matched (or claimed) person. Missing when nobody matched |
+| `direction` | `In` or `Out` — only present when `Accepted` |
+| `score`, `threshold` | Match score and the minimum needed. **Do not show these to end users** |
+| `matchedPose` | Which stored photo (`Front` / `Left` / `Right`) matched best |
+| `message` | Reason, when `success` is `false` |
+| `recordedAtUtc` | Server time of the punch (UTC) |
+| `processingMs` | Time the server took |
+| `topScores` | Debug information, returned only when running locally. Empty on a real server |
+
+### What to show for each `decision`
+
+| `decision` | `success` | Message to show the user |
 |---|---|---|
 | `Accepted` | `true` | "Welcome, {fullName} — marked {direction}" |
-| `Duplicate` | `false` | "Already marked a moment ago" (repeat within 2 minutes) |
+| `Duplicate` | `false` | "Already marked a moment ago" |
 | `Rejected` | `false` | "Face not recognised, please try again" |
 | `NotEnrolled` | `false` | "You are not registered yet" |
-| `NoFaceDetected` | `false` | "Please face the camera" |
+| `NoFaceDetected` | `false` | "Please look at the camera" |
 | `LowQuality` | `false` | "Too dark or blurry, please try again" |
-| `ProviderError` | `false` | "Something went wrong — contact admin" |
+| `ProviderError` | `false` | "Something went wrong, please contact admin" |
 
-When `success` is `false`, the field `message` explains why. Do **not** show `score` or
-`threshold` to end users.
+### Error responses (request itself was wrong)
 
-Rate limit: 60 calls per minute per device. Beyond that you get `429 Too Many Requests`.
+| Status | `code` | When |
+|---|---|---|
+| `400` | — | `image` missing |
+| `401` | — | `X-Api-Key` missing or wrong |
+| `404` | `person_not_found` | The `externalId` / `personId` sent does not exist |
+| `413` | `image_too_large` | Photo over 8 MB |
+| `415` | `unsupported_format` | File is not a real JPEG / PNG / WebP |
+| `429` | — | More than 60 requests per minute from one device |
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.16",
+  "title": "The image could not be used",
+  "status": 415,
+  "detail": "The file content is not a JPEG, PNG or WebP image, whatever the content type says.",
+  "code": "unsupported_format",
+  "hints": [],
+  "traceId": "00-f41a133d0f2fea47ee9adef538a81ccd-6f5f300015a31ceb-00"
+}
+```
 
 ---
 
-## 4. Attendance list / report
+## 5. Attendance list / report
 
+**What it does:** returns attendance records, newest first, with filters. **Used by:** reports,
+admin dashboard.
+
+| Item | Value |
+|---|---|
+| Method | `GET` |
+| URL | `http://localhost:5080/api/v1/attendance` |
+| Body | none |
+
+### Headers
+
+| Header name | Value to enter | Required |
+|---|---|---|
+| `X-Api-Key` | `dev-admin-key` | **Yes** |
+
+### Path parameters
+
+None.
+
+### Query parameters
+
+All optional. Add them after `?`, joined with `&`.
+
+| Parameter | Example value | Meaning |
+|---|---|---|
+| `decision` | `Accepted` | Only this result. Use `Accepted` for the real attendance register. Other values: `Rejected`, `Duplicate`, `NotEnrolled`, `NoFaceDetected`, `LowQuality`, `ProviderError` |
+| `personId` | `01a11f39-a5bc-73f2-88df-92b888fc150a` | Only one person |
+| `fromUtc` | `2026-10-09T00:00:00Z` | From this time (included). Use the `Z` (UTC) format |
+| `toUtc` | `2026-10-10T00:00:00Z` | Up to this time (not included) |
+| `page` | `1` | Page number. Default `1` |
+| `pageSize` | `50` | Records per page. Default `50`, maximum `500` |
+
+**Without `decision`, failed attempts are included too** — useful when someone says "the machine
+didn't recognise me".
+
+### Body
+
+None.
+
+### Example request — today's attendance
+
+```bash
+curl "http://localhost:5080/api/v1/attendance?decision=Accepted&fromUtc=2026-10-09T00:00:00Z&toUtc=2026-10-10T00:00:00Z&page=1&pageSize=50" \
+  -H "X-Api-Key: dev-admin-key"
 ```
-GET http://localhost:5080/api/v1/attendance
-```
 
-**Header:** `X-Api-Key` = **admin key** (locally `dev-admin-key`)
-**Body:** none
+**Postman:** Method **GET** · URL `http://localhost:5080/api/v1/attendance` · **Params** tab
+add rows `decision` = `Accepted`, `fromUtc` = `2026-10-09T00:00:00Z`,
+`toUtc` = `2026-10-10T00:00:00Z`, `page` = `1`, `pageSize` = `50` · **Headers** tab:
+`X-Api-Key` = `dev-admin-key` · no body.
 
-| Query parameter | Required | Example | Notes |
-|---|---|---|---|
-| `personId` | No | `01a11f0f-...` | One person only |
-| `fromUtc` | No | `2026-10-09T00:00:00Z` | Start (inclusive) |
-| `toUtc` | No | `2026-10-10T00:00:00Z` | End (exclusive) |
-| `decision` | No | `Accepted` | Use `Accepted` for the real register |
-| `page` | No | `1` | Default 1 |
-| `pageSize` | No | `50` | Default 50, max 500 |
-
-Example — today's successful punches:
-
-```
-GET http://localhost:5080/api/v1/attendance?decision=Accepted&fromUtc=2026-10-09T00:00:00Z&toUtc=2026-10-10T00:00:00Z
-```
-
-**Success — `200 OK`**
+### Success response — `200 OK`
 
 ```json
 {
   "items": [
     {
-      "id": "01a11f0f-5d8d-7f6a-96ec-a0b86e916537",
+      "id": "01a11f39-a9a2-73d8-9f00-5cfc81deb8a9",
+      "personId": "01a11f39-a5bc-73f2-88df-92b888fc150a",
       "externalId": "EMP-1001",
       "fullName": "Alice Kumar",
       "direction": "In",
       "decision": "Accepted",
+      "matchScore": 1,
+      "threshold": 0.42,
+      "matchedPose": "Left",
       "deviceId": "GATE-A",
-      "createdAtUtc": "2026-10-09T05:07:43.1177823+00:00"
+      "createdAtUtc": "2026-10-09T05:53:55.1068887+00:00",
+      "processingMs": 86
     }
   ],
   "page": 1,
@@ -296,87 +884,62 @@ GET http://localhost:5080/api/v1/attendance?decision=Accepted&fromUtc=2026-10-09
 }
 ```
 
-Without the `decision` filter the list also contains failed attempts — useful when someone says
-"the machine didn't recognise me".
+| Field | Meaning |
+|---|---|
+| `items[].id` | The `eventId` of the punch |
+| `items[].createdAtUtc` | When the punch was recorded (UTC) — convert to local time in the app |
+| `items[].failureReason` | Present only on failed attempts |
+| `total` | Total matching records across all pages |
+| `totalPages` | Number of pages at this `pageSize` |
+
+### Error responses
+
+| Status | When |
+|---|---|
+| `401` | `X-Api-Key` missing or wrong |
+| `403` | Device key used |
 
 ---
 
-## Errors
+## Error format (all endpoints)
 
-Errors come in two shapes.
+Errors come in two shapes. **Check the `code` field in your app, never the `detail` text.**
 
-**Missing or invalid fields → `400`** with an `errors` object:
+**Missing or invalid fields → `400`** with `errors` listing each field:
 
 ```json
 {
   "status": 400,
   "title": "One or more validation errors occurred.",
-  "errors": { "Left": ["The Left field is required."] }
+  "errors": { "Left": [ "The Left field is required." ] }
 }
 ```
 
-**Image or business problems → `4xx`** with a `code`. Check `code` in your app, not the text:
+**Everything else → `code`, `detail` and `hints`:**
 
 ```json
 {
-  "status": 422,
-  "detail": "No face was found in the frame.",
-  "code": "no_face_detected",
-  "hints": ["Fill roughly a third of the frame with the face."]
+  "status": 409,
+  "detail": "A person with ExternalId EMP-1001 already exists in this tenant.",
+  "code": "external_id_exists",
+  "hints": []
 }
 ```
 
-| Status | `code` | Meaning |
-|---|---|---|
-| 401 | — | `X-Api-Key` missing or wrong |
-| 403 | — | Right key, wrong role (e.g. device key on registration) |
-| 404 | `person_not_found` | No such person |
-| 409 | `external_id_exists` | That employee id is already registered |
-| 409 | `duplicate_identity` | This **face** is already registered under another id |
-| 409 | `duplicate_frame` | Same photo used for two angles |
-| 413 | `image_too_large` | Image over 8 MB |
-| 415 | `unsupported_format` | Not a real JPEG / PNG / WebP |
-| 422 | `no_face_detected` | No face found |
-| 422 | `multiple_faces_detected` | More than one person in the photo |
-| 422 | `low_quality` | Blurry, dark, or face too small — see `hints` |
-| 422 | `pose_mismatch` | Head not turned the way that photo requires |
-| 429 | — | Too many requests from this device |
+**`401` and `403` have an empty body.**
 
 ---
 
-## Test it in 2 minutes
+## Local testing note
 
-Start the API (`F5` in VS Code, or `dotnet run --project src/Api`), then from the
-`docs/samples` folder:
+Locally, the API uses a **test face engine that matches by file name, not by the actual face**.
+`alice-front.jpg`, `alice-left.jpg` and `alice-right.jpg` are treated as the same person;
+`bob-front.jpg` is a different person. The images in `docs/samples` are placeholders, not real
+faces.
 
-```bash
-# 1. Register
-curl -X POST http://localhost:5080/api/v1/registrations -H "X-Api-Key: dev-admin-key" -F "externalId=EMP-1001" -F "fullName=Alice Kumar" -F "front=@alice-front.jpg" -F "left=@alice-left.jpg" -F "right=@alice-right.jpg"
+So locally you can test every request, response and error in this document. Real face matching
+starts once the face models are installed; the **URLs, headers, fields and responses stay exactly
+the same**.
 
-# 2. Status (replace {personId} with person.id from step 1)
-curl http://localhost:5080/api/v1/persons/{personId}/enrollment -H "X-Api-Key: dev-admin-key"
-
-# 3. Mark attendance
-curl -X POST http://localhost:5080/api/v1/attendance/mark -H "X-Api-Key: dev-device-key" -F "externalId=EMP-1001" -F "deviceId=GATE-A" -F "image=@alice-front.jpg"
-
-# 4. List
-curl "http://localhost:5080/api/v1/attendance?pageSize=10" -H "X-Api-Key: dev-admin-key"
-```
-
-**In Postman:** Body → **form-data**. For `front`, `left`, `right` and `image`, hover the key
-column and change the type from **Text** to **File**. A ready-made collection is in
-[FaceAttendance.postman_collection.json](FaceAttendance.postman_collection.json).
-
----
-
-## Important while testing locally
-
-The local setup runs a **test face engine that matches by file name, not by face.**
-`alice-front.jpg`, `alice-left.jpg` and `alice-right.jpg` count as the same person;
-`bob-front.jpg` does not. The sample images in `docs/samples` are placeholders, not real faces.
-
-So locally you can test the **whole flow** — requests, responses, errors — but not real face
-matching. Real recognition is switched on with `FaceRecognition:Provider = "onnx"` after
-downloading the models; the endpoints, fields and responses stay exactly the same.
-
-Interactive docs for every endpoint: `http://localhost:5080/scalar/v1`
+All of these endpoints are also listed interactively at `http://localhost:5080/scalar/v1`, and a
+ready-made Postman collection is in [FaceAttendance.postman_collection.json](FaceAttendance.postman_collection.json).

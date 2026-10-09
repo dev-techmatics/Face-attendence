@@ -269,6 +269,41 @@ public sealed class EnrollmentServiceTests : IDisposable
         Assert.Equal(DomainErrorKind.NotFound, ex.Kind);
     }
 
+    [Fact]
+    public async Task RegisterAsync_SamePictureInAllThreeSlots_NamesThemAndSavesNothing()
+    {
+        _provider.Identity = "alice";
+        FaceImage same = Jpeg("one-picture");
+
+        FaceProcessingException ex = await Assert.ThrowsAsync<FaceProcessingException>(() =>
+            _service.RegisterAsync(
+                new CreatePersonCommand("default", "EMP-60", "Copied Thrice"),
+                [(FacePose.Front, same), (FacePose.Left, same), (FacePose.Right, same)]));
+
+        Assert.Equal(FaceError.DuplicateFrame, ex.Error);
+        Assert.Contains("Front, Left and Right", ex.Message);
+
+        // Refused before anything was written: no person, no photo.
+        Assert.False(await _db.People.AnyAsync());
+        Assert.Empty(_store.Saved);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_SamePictureInTwoSlots_NamesExactlyThoseTwo()
+    {
+        _provider.Identity = "alice";
+        FaceImage same = Jpeg("one-picture");
+
+        FaceProcessingException ex = await Assert.ThrowsAsync<FaceProcessingException>(() =>
+            _service.RegisterAsync(
+                new CreatePersonCommand("default", "EMP-61", "Copied Twice"),
+                [(FacePose.Front, same), (FacePose.Left, Jpeg("different")), (FacePose.Right, same)]));
+
+        Assert.Equal(FaceError.DuplicateFrame, ex.Error);
+        Assert.Contains("Front and Right", ex.Message);
+        Assert.False(await _db.People.AnyAsync());
+    }
+
     public void Dispose()
     {
         _db.Dispose();

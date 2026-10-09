@@ -206,6 +206,8 @@ public sealed class EnrollmentService(
                 $"Each pose may appear once per request; repeated: {string.Join(", ", repeated)}.");
         }
 
+        EnsureDistinctPictures(captures);
+
         List<CaptureFaceResult> results = new(captures.Count);
 
         // Front first: it is the pose the duplicate-identity check is most reliable on, so
@@ -334,6 +336,10 @@ public sealed class EnrollmentService(
         IReadOnlyList<(FacePose Pose, FaceImage Image)> captures,
         CancellationToken ct = default)
     {
+        // Checked before the person is created: an upload with the same picture in two slots can
+        // never succeed, so there is no reason to insert a row, consume an id, and roll it back.
+        EnsureDistinctPictures(captures);
+
         Person person = await CreatePersonAsync(command, ct);
 
         try
@@ -362,6 +368,43 @@ public sealed class EnrollmentService(
 
             throw;
         }
+    }
+
+    /// <summary>
+    /// Refuse a batch in which two slots carry the byte-identical picture, naming the slots.
+    /// </summary>
+    /// <remarks>
+    /// The per-capture check would catch this too, but only after the first pose was stored, and
+    /// with a message that does not say which photos clash. Copying one file into all three slots
+    /// is the most common registration mistake, so it gets a precise answer up front.
+    /// </remarks>
+    private static void EnsureDistinctPictures(IReadOnlyList<(FacePose Pose, FaceImage Image)> captures)
+    {
+        FacePose[]? clash = captures
+            .GroupBy(c => c.Image.Sha256)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Select(c => c.Pose).OrderBy(p => p).ToArray())
+            .FirstOrDefault();
+
+        if (clash is null)
+        {
+            return;
+        }
+
+        string slots = clash.Length == 2
+            ? $"{clash[0]} and {clash[1]}"
+            : $"{string.Join(", ", clash[..^1])} and {clash[^1]}";
+
+        throw new FaceProcessingException(
+            FaceError.DuplicateFrame,
+            $"The {slots} photos are the same picture. Each photo must be a different picture.")
+        {
+            Hints =
+            [
+                "Take a separate photo for each angle: looking straight, turned left, turned right.",
+                "Renaming a file does not make it a different picture."
+            ]
+        };
     }
 
     private async Task<Person> LoadPersonAsync(string tenantId, int personId, CancellationToken ct)

@@ -4,9 +4,16 @@ obj/
 .vs/
 .idea/
 artifacts/
-# Face images and biometric data must never be committed
-storage/
+# Face images and biometric data must never be committed.
+# Anchored on purpose: a bare "storage/" also matched the source folder src/Infra/Storage/,
+# because git on Windows ignores case, and silently kept the image-store code out of the repo.
+/storage/
+/src/Api/storage/
 models/*.onnx
+# Ad-hoc test photos dropped next to the scripts.
+/scripts/*.png
+/scripts/*.jpg
+/scripts/*.jpeg
 appsettings.Local.json
 *.db
 *.db-shm

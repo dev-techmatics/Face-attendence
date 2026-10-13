@@ -11,7 +11,7 @@ config value. See [ARCHITECTURE.md](ARCHITECTURE.md) for that decision in full -
 
 ## Status
 
-Built and verified against a local SQL Server Express instance. 68 unit and integration tests
+Built and verified against a local SQL Server Express instance. 70 unit and integration tests
 pass, the solution builds with zero warnings, and the registration and attendance flows have been
 exercised end to end over HTTP.
 
@@ -332,7 +332,7 @@ src/Infra           EF Core, image stores, the three providers
   Providers/Development/  Deterministic stub
 
 src/Api             Controllers, DTOs, auth, problem details
-tests/Tests         68 tests (SQLite in-memory for the repository ones)
+tests/Tests         70 tests (SQLite in-memory for the repository ones)
 scripts/            setup-database, download-models, smoke-test
 docs/samples/       synthetic placeholder images - dev provider only, not real faces
 ```
@@ -370,7 +370,7 @@ two instances starting at once would otherwise race through the same schema chan
 dotnet test
 ```
 
-68 tests covering vector maths and serialisation round-trips, upload and quality validation, the
+70 tests covering vector maths and serialisation round-trips, upload and quality validation, the
 pose gate, options validation, and the enrolment rules end to end against a real database.
 
 ## Before you go live

@@ -1,24 +1,78 @@
+# ----------------------------------------------------------------------------
+# Build output
+# ----------------------------------------------------------------------------
 bin/
 obj/
-*.user
+artifacts/
+[Pp]ublish/
+*.nupkg
+
+# ----------------------------------------------------------------------------
+# IDEs - Visual Studio, Rider. (.vscode/ is tracked on purpose: launch/tasks)
+# ----------------------------------------------------------------------------
 .vs/
 .idea/
-artifacts/
-# Face images and biometric data must never be committed.
-# Anchored on purpose: a bare "storage/" also matched the source folder src/Infra/Storage/,
-# because git on Windows ignores case, and silently kept the image-store code out of the repo.
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.pubxml.user
+
+# ----------------------------------------------------------------------------
+# Tests and logs
+# ----------------------------------------------------------------------------
+[Tt]est[Rr]esult*/
+*.trx
+coverage*/
+*.coverage
+*.log
+[Ll]ogs/
+
+# ----------------------------------------------------------------------------
+# Secrets - never commit keys, certificates or local overrides
+# ----------------------------------------------------------------------------
+.env
+.env.*
+*.pfx
+*.p12
+*.key
+appsettings.Local.json
+appsettings.*.Local.json
+
+# ----------------------------------------------------------------------------
+# Face recognition models (~255MB). Downloaded by scripts/download-models.ps1
+# into src/Api/models/. "**/" is required: a pattern containing a slash is
+# otherwise anchored to the repo root and would miss src/Api/models/. GitHub
+# rejects files over 100MB, so a missed model breaks the push.
+# ----------------------------------------------------------------------------
+**/models/*.onnx
+
+# ----------------------------------------------------------------------------
+# Face photos and biometric data - must never be committed.
+# Anchored on purpose: a bare "storage/" also matched the source folder
+# src/Infra/Storage/, because git on Windows ignores case, and silently kept
+# the image-store code out of the repo.
+# ----------------------------------------------------------------------------
 /storage/
 /src/Api/storage/
-models/*.onnx
 # Ad-hoc test photos dropped next to the scripts.
 /scripts/*.png
 /scripts/*.jpg
 /scripts/*.jpeg
-appsettings.Local.json
+# The synthetic placeholders in docs/samples are tracked deliberately;
+# real photos go under a personal/ subfolder, which is not.
+docs/samples/personal/
+
+# ----------------------------------------------------------------------------
+# Local databases
+# ----------------------------------------------------------------------------
 *.db
 *.db-shm
 *.db-wal
 
-# Real face photographs must never be committed. The synthetic placeholders in
-# docs/samples are tracked deliberately; anything added under a personal/ subfolder is not.
-docs/samples/personal/
+# ----------------------------------------------------------------------------
+# OS clutter
+# ----------------------------------------------------------------------------
+Thumbs.db
+Desktop.ini
+.DS_Store

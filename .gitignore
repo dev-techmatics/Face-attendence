@@ -64,6 +64,17 @@ appsettings.*.Local.json
 docs/samples/personal/
 
 # ----------------------------------------------------------------------------
+# Documentation - kept on the developer's machine only, not in the repository.
+# Nothing in the build or the tests depends on these. scripts/smoke-test.ps1
+# uses docs/samples, so it only runs where that folder exists locally.
+# ----------------------------------------------------------------------------
+/docs/
+/README.md
+/ARCHITECTURE.md
+/CLAUDE.md
+/FRONTEND-API.pdf
+
+# ----------------------------------------------------------------------------
 # Local databases
 # ----------------------------------------------------------------------------
 *.db
